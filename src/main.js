@@ -43,9 +43,31 @@ const runtime = {
 };
 
 let statusTimer = 0;
+const galleryPreloaders = [];
 
 function getFullNames() {
   return `${weddingData.couple.groom} · ${weddingData.couple.bride}`;
+}
+
+function warmImageCache(src) {
+  const preloader = new Image();
+
+  preloader.decoding = "sync";
+
+  try {
+    preloader.fetchPriority = "high";
+  } catch {
+    // Older mobile webviews may not support fetchPriority; src assignment is enough to warm the cache.
+  }
+
+  preloader.src = src;
+  galleryPreloaders.push(preloader);
+
+  if (typeof preloader.decode === "function") {
+    preloader.decode().catch(() => {
+      // Decoding can fail before the image is fully downloaded; the browser cache still benefits from the request.
+    });
+  }
 }
 
 function createMapUrl(query) {
@@ -220,11 +242,14 @@ function buildGallery() {
             alt="${item.caption}"
             loading="eager"
             decoding="async"
+            fetchpriority="high"
           />
         </article>
       `
     )
     .join("");
+
+  galleryItems.forEach((item) => warmImageCache(item.src));
 }
 
 function wireInteractions() {
