@@ -214,8 +214,15 @@ function buildGallery() {
           data-image="${item.src}"
           data-caption="${item.caption}"
         >
-          <span class="gallery-card__media" style="background-image: url('${item.src}')"></span>
-          <span class="gallery-card__sr-only">${item.caption}</span>
+          <span class="gallery-card__media" aria-hidden="true">
+            <img
+              class="gallery-card__image"
+              src="${item.src}"
+              alt=""
+              loading="eager"
+              decoding="async"
+            />
+          </span>
         </button>
       `
     )
