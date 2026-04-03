@@ -186,17 +186,12 @@ function buildGallery() {
           class="gallery-card"
           type="button"
           aria-label="${item.caption}"
+          style="--card-image: url('${item.src}')"
           data-gallery-trigger
           data-image="${item.src}"
           data-caption="${item.caption}"
         >
-          <img
-            class="gallery-card__image"
-            src="${item.src}"
-            alt="${item.caption}"
-            loading="${index < 4 ? "eager" : "lazy"}"
-            decoding="async"
-          />
+          <span class="gallery-card__sr-only">${item.caption}</span>
           <span class="gallery-card__caption">${item.caption}</span>
         </button>
       `

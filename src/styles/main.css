@@ -461,17 +461,19 @@ body.is-unsealed .opening-screen {
     box-shadow var(--transition-base);
 }
 
+.gallery-card::before {
+  position: absolute;
+  inset: 0;
+  background-image: var(--card-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  content: "";
+}
+
 .gallery-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 22px 44px rgba(74, 26, 38, 0.16);
-}
-
-.gallery-card__image {
-  width: 100%;
-  height: auto;
-  min-height: 17rem;
-  aspect-ratio: 4 / 5;
-  object-fit: cover;
 }
 
 .gallery-card__caption {
@@ -485,6 +487,19 @@ body.is-unsealed .opening-screen {
   font-size: 0.88rem;
   background: linear-gradient(135deg, rgba(65, 19, 31, 0.78), rgba(127, 47, 67, 0.55));
   backdrop-filter: blur(8px);
+}
+
+.gallery-card__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
 }
 
 .reminder-list {
@@ -631,12 +646,6 @@ body.is-unsealed .opening-screen {
 
   .gallery-card {
     height: 100%;
-  }
-
-  .gallery-card__image {
-    height: 100%;
-    min-height: 100%;
-    aspect-ratio: auto;
   }
 }
 
