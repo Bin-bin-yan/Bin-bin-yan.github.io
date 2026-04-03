@@ -3,9 +3,7 @@ export function setupLightbox({ dialog, imageElement, captionElement, triggerSel
     return;
   }
 
-  document.addEventListener("click", (event) => {
-    const trigger = event.target.closest(triggerSelector);
-
+  const openPreview = (trigger) => {
     if (!trigger) {
       return;
     }
@@ -20,6 +18,26 @@ export function setupLightbox({ dialog, imageElement, captionElement, triggerSel
     if (!dialog.open) {
       dialog.showModal();
     }
+  };
+
+  document.addEventListener("click", (event) => {
+    const trigger = event.target.closest(triggerSelector);
+    openPreview(trigger);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    const trigger = event.target.closest(triggerSelector);
+
+    if (!trigger) {
+      return;
+    }
+
+    event.preventDefault();
+    openPreview(trigger);
   });
 
   dialog.addEventListener("click", (event) => {

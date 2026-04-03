@@ -454,6 +454,7 @@ body.is-unsealed .opening-screen {
   border: 1px solid rgba(127, 47, 67, 0.1);
   background: rgba(255, 255, 255, 0.72);
   box-shadow: var(--shadow-card);
+  cursor: pointer;
   transition:
     transform var(--transition-base),
     box-shadow var(--transition-base);
@@ -469,27 +470,6 @@ body.is-unsealed .opening-screen {
   width: 100%;
   aspect-ratio: 4 / 5;
   object-fit: cover;
-  position: relative;
-  z-index: 0;
-}
-
-.gallery-card__trigger {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: transparent;
-  appearance: none;
-  -webkit-appearance: none;
-  -webkit-tap-highlight-color: transparent;
-  cursor: pointer;
-  z-index: 1;
 }
 
 .reminder-list {
