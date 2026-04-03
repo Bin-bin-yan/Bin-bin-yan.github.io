@@ -1,5 +1,5 @@
 export function setupLightbox({ dialog, imageElement, captionElement, triggerSelector }) {
-  if (!dialog || !imageElement || !captionElement) {
+  if (!dialog || !imageElement) {
     return;
   }
 
@@ -12,7 +12,10 @@ export function setupLightbox({ dialog, imageElement, captionElement, triggerSel
 
     imageElement.src = trigger.dataset.image || "";
     imageElement.alt = trigger.dataset.caption || "婚纱照预览";
-    captionElement.textContent = trigger.dataset.caption || "婚纱照预览";
+
+    if (captionElement) {
+      captionElement.textContent = "";
+    }
 
     if (!dialog.open) {
       dialog.showModal();

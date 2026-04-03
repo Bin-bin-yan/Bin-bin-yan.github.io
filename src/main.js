@@ -205,18 +205,17 @@ function buildGallery() {
 
   elements.galleryGrid.innerHTML = galleryItems
     .map(
-      (item, index) => `
+      (item) => `
         <button
           class="gallery-card"
           type="button"
           aria-label="${item.caption}"
-          style="--card-image: url('${item.src}')"
           data-gallery-trigger
           data-image="${item.src}"
           data-caption="${item.caption}"
         >
+          <span class="gallery-card__media" style="background-image: url('${item.src}')"></span>
           <span class="gallery-card__sr-only">${item.caption}</span>
-          <span class="gallery-card__caption">${item.caption}</span>
         </button>
       `
     )
