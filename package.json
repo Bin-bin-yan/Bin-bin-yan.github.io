@@ -1,0 +1,15 @@
+{
+  "name": "h5-wedding-invitation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static H5 wedding invitation for GitHub Pages.",
+  "scripts": {
+    "dev": "python -m http.server 4173",
+    "build": "node ./scripts/build.mjs",
+    "preview": "python -m http.server 4173 -d dist",
+    "prepare:images": "pwsh -ExecutionPolicy Bypass -File ./scripts/prepare-images.ps1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

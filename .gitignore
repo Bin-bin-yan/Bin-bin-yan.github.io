@@ -1,0 +1,10 @@
+node_modules/
+dist/
+Thumbs.db
+.DS_Store
+npm-debug.log*
+.codex/
+.serena/
+
+# Raw wedding photos stay local only; the site uses generated web assets.
+图片/

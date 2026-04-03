@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="闫斌斌与谷晓敏的 H5 婚礼邀请函，诚邀亲友共赴 2026 年 5 月 3 日的喜宴。"
+    />
+    <meta name="theme-color" content="#7f2f43" />
+    <title>婚礼邀请函</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="./src/styles/main.css" />
+  </head>
+  <body class="is-locked">
+    <div class="opening-screen" id="opening-screen" aria-labelledby="opening-title">
+      <div class="opening-screen__panel">
+        <p class="eyebrow">Wedding Invitation</p>
+        <h1 class="opening-screen__title" id="opening-title">一纸喜帖，邀您共赴好日子</h1>
+        <p class="opening-screen__couple">
+          <span id="opening-groom">闫斌斌</span>
+          <span class="opening-screen__ampersand">&amp;</span>
+          <span id="opening-bride">谷晓敏</span>
+        </p>
+        <p class="opening-screen__date" id="opening-date">2026 年 5 月 3 日</p>
+        <button class="button button--primary" id="open-invitation" type="button">
+          启封喜帖
+        </button>
+      </div>
+    </div>
+
+    <main class="site">
+      <section class="hero section reveal is-visible" id="top">
+        <div class="section-shell hero__shell">
+          <div class="hero__copy">
+            <p class="eyebrow" id="hero-eyebrow">Wedding Invitation</p>
+            <h1 class="hero__title" id="hero-title">我们结婚啦</h1>
+            <p class="hero__names" id="hero-names">闫斌斌 · 谷晓敏</p>
+            <p class="hero__date" id="hero-date">2026 年 5 月 3 日</p>
+            <p class="hero__lead" id="hero-lead">
+              愿这封邀请，带着我们的欢喜与郑重，稳稳地抵达您手中。
+            </p>
+            <div class="hero__actions">
+              <button class="button button--primary" id="hero-scroll" type="button">
+                查看婚宴信息
+              </button>
+              <button class="button button--secondary" id="calendar-button" type="button">
+                加入日历
+              </button>
+            </div>
+          </div>
+
+          <div class="hero__media section-card">
+            <img
+              class="hero__image"
+              id="hero-image"
+              src="./assets/images/gallery/wedding-01.jpg"
+              alt="婚礼封面照"
+              loading="eager"
+              decoding="async"
+            />
+            <div class="hero__stamp">
+              <p class="hero__stamp-label">Save The Date</p>
+              <p class="hero__stamp-value" id="hero-stamp">05 / 03</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section reveal" id="details">
+        <div class="section-shell">
+          <div class="section-heading">
+            <p class="eyebrow">Ceremony Note</p>
+            <h2>佳期已定，喜讯相邀</h2>
+          </div>
+
+          <div class="section-card invitation-card">
+            <div class="invitation-card__copy" id="invitation-copy"></div>
+            <div class="invitation-card__grid" id="highlight-grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section reveal">
+        <div class="section-shell countdown-shell">
+          <div class="section-heading">
+            <p class="eyebrow">Countdown</p>
+            <h2>距离好日子还有</h2>
+          </div>
+
+          <div class="section-card countdown-card">
+            <ul class="countdown-list" aria-label="婚礼倒计时">
+              <li class="countdown-item">
+                <span class="countdown-item__value" id="days-value">0</span>
+                <span class="countdown-item__label">天</span>
+              </li>
+              <li class="countdown-item">
+                <span class="countdown-item__value" id="hours-value">0</span>
+                <span class="countdown-item__label">时</span>
+              </li>
+              <li class="countdown-item">
+                <span class="countdown-item__value" id="minutes-value">0</span>
+                <span class="countdown-item__label">分</span>
+              </li>
+              <li class="countdown-item">
+                <span class="countdown-item__value" id="seconds-value">0</span>
+                <span class="countdown-item__label">秒</span>
+              </li>
+            </ul>
+            <p class="countdown-card__hint" id="countdown-hint">
+              每一次倒数，都是奔赴团圆的一小步。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section reveal">
+        <div class="section-shell venue-shell">
+          <div class="section-heading">
+            <p class="eyebrow">Venue</p>
+            <h2>赴宴信息</h2>
+          </div>
+
+          <div class="section-card venue-card">
+            <div>
+              <p class="venue-card__city" id="venue-city">河南 · 洛阳</p>
+              <h3 class="venue-card__name" id="venue-name">洛阳市和平门烤鸭店</h3>
+              <p class="venue-card__note" id="venue-note">
+                敬备喜筵，恭候光临。愿亲友们一路顺遂，欢欢喜喜而来。
+              </p>
+            </div>
+            <div class="venue-card__actions">
+              <a class="button button--primary" id="map-link" href="#" target="_blank" rel="noreferrer">
+                导航前往
+              </a>
+              <button class="button button--secondary" id="copy-venue" type="button">
+                复制地点
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section reveal">
+        <div class="section-shell">
+          <div class="section-heading">
+            <p class="eyebrow">Gallery</p>
+            <h2>我们定格的浪漫时刻</h2>
+          </div>
+
+          <div class="gallery-grid" id="gallery-grid"></div>
+        </div>
+      </section>
+
+      <section class="section reveal">
+        <div class="section-shell">
+          <div class="section-heading">
+            <p class="eyebrow">Warm Reminder</p>
+            <h2>赴约小贴士</h2>
+          </div>
+
+          <div class="section-card reminder-card">
+            <ul class="reminder-list" id="tips-list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section reveal">
+        <div class="section-shell">
+          <div class="section-card closing-card">
+            <p class="eyebrow">With Love</p>
+            <h2 id="closing-title">期待与您同席见喜</h2>
+            <p class="closing-card__copy" id="closing-note">
+              愿这场关于爱、亲情与团圆的宴席，因为您的到来，变得更加完整。
+            </p>
+            <div class="closing-card__actions">
+              <button class="button button--primary" id="copy-link" type="button">
+                复制喜帖链接
+              </button>
+              <a class="button button--secondary" href="#top">回到顶部</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <dialog class="photo-dialog" id="photo-dialog" aria-labelledby="photo-dialog-title">
+      <form class="photo-dialog__close" method="dialog">
+        <button class="button button--secondary" type="submit">关闭</button>
+      </form>
+      <figure class="photo-dialog__figure">
+        <img class="photo-dialog__image" id="dialog-image" alt="" />
+        <figcaption class="photo-dialog__caption" id="photo-dialog-title"></figcaption>
+      </figure>
+    </dialog>
+
+    <p class="status-toast" id="status-toast" aria-live="polite"></p>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
