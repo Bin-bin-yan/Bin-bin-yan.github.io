@@ -206,24 +206,23 @@ function buildGallery() {
   elements.galleryGrid.innerHTML = galleryItems
     .map(
       (item) => `
-        <button
-          class="gallery-card"
-          type="button"
-          aria-label="${item.caption}"
-          data-gallery-trigger
-          data-image="${item.src}"
-          data-caption="${item.caption}"
-        >
-          <span class="gallery-card__media" aria-hidden="true">
-            <img
-              class="gallery-card__image"
-              src="${item.src}"
-              alt=""
-              loading="eager"
-              decoding="async"
-            />
-          </span>
-        </button>
+        <article class="gallery-card">
+          <img
+            class="gallery-card__image"
+            src="${item.src}"
+            alt="${item.caption}"
+            loading="eager"
+            decoding="async"
+          />
+          <button
+            class="gallery-card__trigger"
+            type="button"
+            aria-label="${item.caption}"
+            data-gallery-trigger
+            data-image="${item.src}"
+            data-caption="${item.caption}"
+          ></button>
+        </article>
       `
     )
     .join("");
