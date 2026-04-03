@@ -38,6 +38,10 @@ const formatters = {
   }),
 };
 
+const runtime = {
+  isWeChat: /MicroMessenger/i.test(window.navigator.userAgent),
+};
+
 let statusTimer = 0;
 
 function getFullNames() {
@@ -46,6 +50,19 @@ function getFullNames() {
 
 function createMapUrl(query) {
   return `https://uri.amap.com/search?query=${encodeURIComponent(query)}`;
+}
+
+function createWeChatMapUrl(query) {
+  return `https://map.qq.com/search/index.html?query=${encodeURIComponent(query)}`;
+}
+
+function getEventSummaryText() {
+  return [
+    `${getFullNames()} 婚礼邀请`,
+    `日期：${weddingData.event.displayDate}`,
+    `地点：${weddingData.event.venueName}`,
+    `地址：${weddingData.event.venueAddress}`,
+  ].join("\n");
 }
 
 function showStatus(message) {
@@ -163,7 +180,14 @@ function applyWeddingData() {
     )
     .join("");
 
-  elements.mapLink.href = createMapUrl(weddingData.event.mapQuery);
+  elements.mapLink.href = runtime.isWeChat
+    ? createWeChatMapUrl(weddingData.event.mapQuery)
+    : createMapUrl(weddingData.event.mapQuery);
+
+  if (runtime.isWeChat) {
+    elements.calendarButton.textContent = "复制婚礼行程";
+    elements.mapLink.textContent = "打开地图搜索";
+  }
 }
 
 function buildGallery() {
@@ -221,12 +245,35 @@ function wireInteractions() {
   });
 
   elements.calendarButton.addEventListener("click", () => {
+    if (runtime.isWeChat) {
+      copyText(
+        getEventSummaryText(),
+        "婚礼信息已复制，请在微信里粘贴到日历或聊天。"
+      );
+      return;
+    }
+
     downloadCalendarFile();
     showStatus("已生成日历文件。");
   });
 
+  elements.mapLink.addEventListener("click", async (event) => {
+    if (!runtime.isWeChat) {
+      return;
+    }
+
+    event.preventDefault();
+    await copyText(
+      weddingData.event.venueAddress,
+      "地址已复制，若地图页没跳转，可直接粘贴搜索。"
+    );
+    window.setTimeout(() => {
+      window.location.href = createWeChatMapUrl(weddingData.event.mapQuery);
+    }, 120);
+  });
+
   elements.copyVenueButton.addEventListener("click", () => {
-    copyText(weddingData.event.venueName, "地点已复制。");
+    copyText(weddingData.event.venueAddress, "地点已复制。");
   });
 
   elements.copyLinkButton.addEventListener("click", () => {

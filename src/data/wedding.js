@@ -15,6 +15,7 @@ export const weddingData = {
     displayDate: "2026 年 5 月 3 日",
     city: "河南 · 洛阳",
     venueName: "洛阳市和平门烤鸭店",
+    venueAddress: "河南省洛阳市和平门烤鸭店",
     venueNote:
       "佳期已定，敬备喜筵。诚邀您在初夏时节与我们共同见证这场关于爱与团圆的好日子。",
     mapQuery: "洛阳市和平门烤鸭店",
