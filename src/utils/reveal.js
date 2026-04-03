@@ -1,7 +1,9 @@
 export function setupReveal(elements) {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const mobileViewport = window.matchMedia("(max-width: 959px)");
 
-  if (reducedMotion.matches || !("IntersectionObserver" in window)) {
+  // Mobile browsers were leaving sections stuck at opacity:0, so narrow viewports skip reveal gating entirely.
+  if (reducedMotion.matches || mobileViewport.matches || !("IntersectionObserver" in window)) {
     elements.forEach((element) => element.classList.add("is-visible"));
     return;
   }
