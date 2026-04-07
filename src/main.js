@@ -54,7 +54,8 @@ const runtime = {
 };
 
 let statusTimer = 0;
-const WHITE_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 10'%3E%3Crect width='16' height='10' fill='%23fffaf8'/%3E%3C/svg%3E";
+const TRANSPARENT_PLACEHOLDER =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
 function wait(milliseconds) {
   return new Promise((resolve) => {
@@ -284,24 +285,7 @@ function loadGalleryImage(imageElement) {
   });
 }
 
-function getGalleryBatchSize() {
-  const connection =
-    window.navigator.connection ||
-    window.navigator.mozConnection ||
-    window.navigator.webkitConnection;
-
-  if (connection?.saveData || /2g/.test(connection?.effectiveType || "")) {
-    return 1;
-  }
-
-  if (window.matchMedia("(max-width: 679px)").matches) {
-    return 2;
-  }
-
-  return 3;
-}
-
-async function streamGalleryImages() {
+function startGalleryLoading() {
   if (runtime.galleryStreamStarted) {
     return;
   }
@@ -309,17 +293,9 @@ async function streamGalleryImages() {
   runtime.galleryStreamStarted = true;
 
   const galleryImages = [...elements.galleryGrid.querySelectorAll("[data-gallery-src]")];
-  const batchSize = getGalleryBatchSize();
-
-  for (let index = 0; index < galleryImages.length; index += batchSize) {
-    const batch = galleryImages.slice(index, index + batchSize);
-
-    await Promise.all(batch.map((imageElement) => loadGalleryImage(imageElement)));
-
-    if (index + batchSize < galleryImages.length) {
-      await wait(30);
-    }
-  }
+  galleryImages.forEach((imageElement) => {
+    void loadGalleryImage(imageElement);
+  });
 }
 
 function syncMusicState() {
@@ -435,12 +411,12 @@ function buildGallery() {
     elements.heroImage.alt = `${getFullNames()} 的婚礼封面照`;
     primeHeroImage(coverImage.src).finally(() => {
       scheduleAudioWarmup();
-      void streamGalleryImages();
+      startGalleryLoading();
     });
   } else {
     runtime.heroReady = true;
     scheduleAudioWarmup();
-    void streamGalleryImages();
+    startGalleryLoading();
   }
 
   elements.galleryGrid.innerHTML = galleryItems
@@ -457,10 +433,10 @@ function buildGallery() {
         >
           <img
             class="gallery-card__image"
-            src="${WHITE_PLACEHOLDER}"
+            src="${TRANSPARENT_PLACEHOLDER}"
             alt="${item.caption}"
             data-gallery-src="${item.src}"
-            loading="lazy"
+            loading="eager"
             decoding="async"
           />
         </article>
