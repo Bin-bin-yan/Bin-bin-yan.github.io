@@ -434,7 +434,7 @@ function applyWeddingData() {
     ? createWeChatMapUrl(weddingData.event.mapQuery)
     : createMapUrl(weddingData.event.mapQuery);
 
-  if (runtime.isWeChat) {
+  if (runtime.isWeChat && elements.calendarButton) {
     elements.calendarButton.textContent = "复制婚礼行程";
     elements.mapLink.textContent = "打开地图搜索";
   }
@@ -521,18 +521,20 @@ function wireInteractions() {
     });
   });
 
-  elements.calendarButton.addEventListener("click", () => {
-    if (runtime.isWeChat) {
-      copyText(
-        getEventSummaryText(),
-        "婚礼信息已复制，请在微信里粘贴到日历或聊天。"
-      );
-      return;
-    }
+  if (elements.calendarButton) {
+    elements.calendarButton.addEventListener("click", () => {
+      if (runtime.isWeChat) {
+        copyText(
+          getEventSummaryText(),
+          "婚礼信息已复制，请在微信里粘贴到日历或聊天。"
+        );
+        return;
+      }
 
-    downloadCalendarFile();
-    showStatus("已生成日历文件。");
-  });
+      downloadCalendarFile();
+      showStatus("已生成日历文件。");
+    });
+  }
 
   elements.mapLink.addEventListener("click", async (event) => {
     if (!runtime.isWeChat) {
@@ -553,9 +555,11 @@ function wireInteractions() {
     copyText(weddingData.event.venueAddress, "地点已复制。");
   });
 
-  elements.copyLinkButton.addEventListener("click", () => {
-    copyText(window.location.href, "喜帖链接已复制。");
-  });
+  if (elements.copyLinkButton) {
+    elements.copyLinkButton.addEventListener("click", () => {
+      copyText(window.location.href, "喜帖链接已复制。");
+    });
+  }
 
   elements.musicToggle.addEventListener("click", async () => {
     if (elements.bgmAudio.paused) {

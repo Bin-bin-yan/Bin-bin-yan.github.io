@@ -424,6 +424,14 @@ body.is-unsealed .opening-screen {
   margin-top: 1.4rem;
 }
 
+.hero__action-placeholder {
+  flex: 1 1 100%;
+  min-height: 3.5rem;
+  border-radius: 999px;
+  background: transparent;
+  pointer-events: none;
+}
+
 .hero__media {
   position: relative;
   isolation: isolate;
@@ -1533,6 +1541,10 @@ body.is-unsealed .hero.reveal.is-visible .hero__media {
   .venue-card__actions .button,
   .closing-card__actions .button {
     flex: 1 1 100%;
+  }
+
+  .hero__action-placeholder {
+    min-height: 3.65rem;
   }
 }
 
