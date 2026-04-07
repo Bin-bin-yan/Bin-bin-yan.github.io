@@ -284,6 +284,23 @@ function loadGalleryImage(imageElement) {
   });
 }
 
+function getGalleryBatchSize() {
+  const connection =
+    window.navigator.connection ||
+    window.navigator.mozConnection ||
+    window.navigator.webkitConnection;
+
+  if (connection?.saveData || /2g/.test(connection?.effectiveType || "")) {
+    return 1;
+  }
+
+  if (window.matchMedia("(max-width: 679px)").matches) {
+    return 2;
+  }
+
+  return 3;
+}
+
 async function streamGalleryImages() {
   if (runtime.galleryStreamStarted) {
     return;
@@ -292,12 +309,15 @@ async function streamGalleryImages() {
   runtime.galleryStreamStarted = true;
 
   const galleryImages = [...elements.galleryGrid.querySelectorAll("[data-gallery-src]")];
+  const batchSize = getGalleryBatchSize();
 
-  for (const [index, imageElement] of galleryImages.entries()) {
-    await loadGalleryImage(imageElement);
+  for (let index = 0; index < galleryImages.length; index += batchSize) {
+    const batch = galleryImages.slice(index, index + batchSize);
 
-    if (index < galleryImages.length - 1) {
-      await wait(90);
+    await Promise.all(batch.map((imageElement) => loadGalleryImage(imageElement)));
+
+    if (index + batchSize < galleryImages.length) {
+      await wait(30);
     }
   }
 }
