@@ -48,6 +48,7 @@ const runtime = {
   isWeChat: /MicroMessenger/i.test(window.navigator.userAgent),
   heroReady: false,
   audioReady: false,
+  audioPlaybackConfirmed: false,
   heroWarmupPromise: Promise.resolve(),
   audioWarmupPromise: null,
   galleryStreamStarted: false,
@@ -246,6 +247,91 @@ function scheduleAudioWarmup() {
   window.setTimeout(startWarmup, 260);
 }
 
+function waitForAudioProgress(timeout = 1400) {
+  return new Promise((resolve) => {
+    const startTime = elements.bgmAudio.currentTime;
+    let settled = false;
+
+    const hasProgress = () =>
+      !elements.bgmAudio.paused && elements.bgmAudio.currentTime > startTime + 0.01;
+
+    const finish = (result) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      window.clearInterval(progressTimer);
+      window.clearTimeout(timeoutTimer);
+      elements.bgmAudio.removeEventListener("timeupdate", handleProgress);
+      resolve(result);
+    };
+
+    const handleProgress = () => {
+      if (hasProgress()) {
+        finish(true);
+      }
+    };
+
+    const progressTimer = window.setInterval(handleProgress, 120);
+    const timeoutTimer = window.setTimeout(() => finish(hasProgress()), timeout);
+
+    elements.bgmAudio.addEventListener("timeupdate", handleProgress);
+    handleProgress();
+  });
+}
+
+function waitForWeChatBridge(timeout = 1200) {
+  return new Promise((resolve) => {
+    if (!runtime.isWeChat) {
+      resolve(false);
+      return;
+    }
+
+    if (typeof window.WeixinJSBridge !== "undefined") {
+      resolve(true);
+      return;
+    }
+
+    const handleReady = () => {
+      cleanup();
+      resolve(true);
+    };
+
+    const cleanup = () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("WeixinJSBridgeReady", handleReady);
+    };
+
+    const timer = window.setTimeout(() => {
+      cleanup();
+      resolve(typeof window.WeixinJSBridge !== "undefined");
+    }, timeout);
+
+    document.addEventListener("WeixinJSBridgeReady", handleReady, { once: true });
+  });
+}
+
+async function playMusicWithWeChatBridge() {
+  const bridgeReady = await waitForWeChatBridge();
+
+  if (!bridgeReady || typeof window.WeixinJSBridge?.invoke !== "function") {
+    return false;
+  }
+
+  return new Promise((resolve) => {
+    window.WeixinJSBridge.invoke("getNetworkType", {}, async () => {
+      try {
+        await elements.bgmAudio.play();
+        resolve(await waitForAudioProgress(1500));
+      } catch (error) {
+        console.error(error);
+        resolve(false);
+      }
+    });
+  });
+}
+
 function loadGalleryImage(imageElement) {
   return new Promise((resolve) => {
     if (!imageElement || imageElement.dataset.loaded === "true") {
@@ -299,7 +385,7 @@ function startGalleryLoading() {
 }
 
 function syncMusicState() {
-  const isPlaying = !elements.bgmAudio.paused;
+  const isPlaying = runtime.audioPlaybackConfirmed && !elements.bgmAudio.paused;
 
   document.body.classList.toggle("music-playing", isPlaying);
   elements.musicPlayer.classList.toggle("is-playing", isPlaying);
@@ -313,23 +399,43 @@ async function playMusic({ announceFailure = false } = {}) {
       await Promise.race([primeAudioPlayback(), wait(680)]);
     }
 
+    runtime.audioPlaybackConfirmed = false;
     await elements.bgmAudio.play();
-    syncMusicState();
-    return true;
-  } catch (error) {
+    let started = await waitForAudioProgress();
+
+    if (!started && runtime.isWeChat) {
+      started = await playMusicWithWeChatBridge();
+    }
+
+    runtime.audioPlaybackConfirmed = started;
     syncMusicState();
 
+    if (started) {
+      return true;
+    }
+
+    elements.bgmAudio.pause();
+  } catch (error) {
     if (announceFailure) {
       showStatus("点一下右上角的 BGM 按钮就能播放音乐。");
     }
 
     console.error(error);
-    return false;
   }
+
+  runtime.audioPlaybackConfirmed = false;
+  syncMusicState();
+
+  if (announceFailure) {
+    showStatus("点一下右上角的 BGM 按钮就能播放音乐。");
+  }
+
+  return false;
 }
 
 function pauseMusic({ announce = false } = {}) {
   elements.bgmAudio.pause();
+  runtime.audioPlaybackConfirmed = false;
   syncMusicState();
 
   if (announce) {
@@ -399,12 +505,7 @@ function applyWeddingData() {
 }
 
 function buildGallery() {
-  const galleryItems = galleryManifest.map((item, index) => ({
-    ...item,
-    caption: `${getFullNames()} · 婚纱照 ${String(index + 1).padStart(2, "0")}`,
-  }));
-
-  const coverImage = galleryItems.find((item) => item.isCover) || galleryItems[0];
+  const coverImage = galleryManifest.find((item) => item.isCover) || galleryManifest[0];
   const heroImageSource = weddingData.hero.imageSrc
     ? {
         src: weddingData.hero.imageSrc,
@@ -416,6 +517,12 @@ function buildGallery() {
           alt: `${getFullNames()} 的婚礼封面照`,
         }
       : null;
+  const galleryItems = galleryManifest
+    .filter((item) => item.src !== heroImageSource?.src)
+    .map((item, index) => ({
+      ...item,
+      caption: `${getFullNames()} · 婚纱照 ${String(index + 1).padStart(2, "0")}`,
+    }));
 
   if (heroImageSource) {
     elements.heroImage.src = heroImageSource.src;
@@ -551,9 +658,16 @@ function wireInteractions() {
 
   elements.bgmAudio.addEventListener("play", syncMusicState);
   elements.bgmAudio.addEventListener("pause", syncMusicState);
+  elements.bgmAudio.addEventListener("timeupdate", () => {
+    if (!elements.bgmAudio.paused && elements.bgmAudio.currentTime > 0) {
+      runtime.audioPlaybackConfirmed = true;
+      syncMusicState();
+    }
+  });
   elements.bgmAudio.addEventListener("error", () => {
     runtime.audioReady = false;
     runtime.audioWarmupPromise = null;
+    runtime.audioPlaybackConfirmed = false;
     syncMusicState();
     showStatus("音乐资源加载出了点岔子，稍后再试一下。");
   });
