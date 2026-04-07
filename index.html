@@ -10,7 +10,7 @@
       name="description"
       content="闫斌斌与谷晓敏的 H5 婚礼邀请函，诚邀亲友共赴 2026 年 5 月 3 日的喜宴。"
     />
-    <meta name="theme-color" content="#7f2f43" />
+    <meta name="theme-color" content="#8e3652" />
     <title>婚礼邀请函</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -27,14 +27,49 @@
           <span id="opening-bride">谷晓敏</span>
         </p>
         <p class="opening-screen__date" id="opening-date">2026 年 5 月 3 日</p>
+        <p class="opening-screen__hint" id="opening-music-hint">启封后将播放 BGM</p>
         <button class="button button--primary" id="open-invitation" type="button">
           启封喜帖
         </button>
       </div>
     </div>
 
+    <aside class="music-player" id="music-player" aria-label="背景音乐播放器">
+      <div class="music-player__disc" aria-hidden="true">
+        <span class="music-player__disc-core"></span>
+      </div>
+      <div class="music-player__meta">
+        <p class="music-player__eyebrow">Wedding BGM</p>
+        <p class="music-player__title" id="music-title">My Only</p>
+        <p class="music-player__artist" id="music-artist">周深</p>
+      </div>
+      <button
+        class="music-player__toggle"
+        id="music-toggle"
+        type="button"
+        aria-label="播放背景音乐"
+        aria-pressed="false"
+      >
+        <svg class="music-player__icon music-player__icon--play" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M8 6.5v11l9-5.5-9-5.5z" fill="currentColor" />
+        </svg>
+        <svg class="music-player__icon music-player__icon--pause" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M7 6.75A.75.75 0 0 1 7.75 6h1.5a.75.75 0 0 1 .75.75v10.5a.75.75 0 0 1-.75.75h-1.5A.75.75 0 0 1 7 17.25V6.75zm7 0A.75.75 0 0 1 14.75 6h1.5a.75.75 0 0 1 .75.75v10.5a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1-.75-.75V6.75z"
+            fill="currentColor"
+          />
+        </svg>
+        <span class="music-player__bars" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+      </button>
+      <audio id="bgm-audio" loop preload="none"></audio>
+    </aside>
+
     <main class="site">
-      <section class="hero section reveal is-visible" id="top">
+      <section class="hero section reveal reveal--hero is-visible" id="top">
         <div class="section-shell hero__shell">
           <div class="hero__copy">
             <p class="eyebrow" id="hero-eyebrow">Wedding Invitation</p>
@@ -71,7 +106,7 @@
         </div>
       </section>
 
-      <section class="section reveal" id="details">
+      <section class="section reveal reveal--story" id="details">
         <div class="section-shell">
           <div class="section-heading">
             <p class="eyebrow">Ceremony Note</p>
@@ -85,7 +120,7 @@
         </div>
       </section>
 
-      <section class="section reveal">
+      <section class="section reveal reveal--countdown">
         <div class="section-shell countdown-shell">
           <div class="section-heading">
             <p class="eyebrow">Countdown</p>
@@ -118,7 +153,7 @@
         </div>
       </section>
 
-      <section class="section reveal">
+      <section class="section reveal reveal--venue">
         <div class="section-shell venue-shell">
           <div class="section-heading">
             <p class="eyebrow">Venue</p>
@@ -145,7 +180,7 @@
         </div>
       </section>
 
-      <section class="section reveal">
+      <section class="section reveal reveal--gallery">
         <div class="section-shell">
           <div class="section-heading">
             <p class="eyebrow">Gallery</p>
@@ -156,7 +191,7 @@
         </div>
       </section>
 
-      <section class="section reveal">
+      <section class="section reveal reveal--tips">
         <div class="section-shell">
           <div class="section-heading">
             <p class="eyebrow">Warm Reminder</p>
@@ -169,7 +204,7 @@
         </div>
       </section>
 
-      <section class="section reveal">
+      <section class="section reveal reveal--closing">
         <div class="section-shell">
           <div class="section-card closing-card">
             <p class="eyebrow">With Love</p>

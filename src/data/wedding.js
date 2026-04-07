@@ -20,6 +20,12 @@ export const weddingData = {
       "佳期已定，敬备喜筵。诚邀您在初夏时节与我们共同见证这场关于爱与团圆的好日子。",
     mapQuery: "洛阳市和平门烤鸭店",
   },
+  soundtrack: {
+    title: "My Only",
+    artist: "周深",
+    src: "./assets/audio/my-only-zhou-shen.mp3",
+    hint: "启封后将播放 BGM · My Only - 周深",
+  },
   invitationLines: [
     "谨定于 2026 年 5 月 3 日，",
     "在洛阳市和平门烤鸭店备下喜宴，",

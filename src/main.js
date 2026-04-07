@@ -6,6 +6,7 @@ import { setupReveal } from "./utils/reveal.js";
 
 const elements = {
   openingScreen: document.querySelector("#opening-screen"),
+  openingMusicHint: document.querySelector("#opening-music-hint"),
   openInvitation: document.querySelector("#open-invitation"),
   heroScroll: document.querySelector("#hero-scroll"),
   calendarButton: document.querySelector("#calendar-button"),
@@ -18,6 +19,11 @@ const elements = {
   galleryGrid: document.querySelector("#gallery-grid"),
   tipsList: document.querySelector("#tips-list"),
   statusToast: document.querySelector("#status-toast"),
+  musicPlayer: document.querySelector("#music-player"),
+  musicToggle: document.querySelector("#music-toggle"),
+  musicTitle: document.querySelector("#music-title"),
+  musicArtist: document.querySelector("#music-artist"),
+  bgmAudio: document.querySelector("#bgm-audio"),
   countdown: {
     days: document.querySelector("#days-value"),
     hours: document.querySelector("#hours-value"),
@@ -134,12 +140,48 @@ function downloadCalendarFile() {
   URL.revokeObjectURL(downloadUrl);
 }
 
+function syncMusicState() {
+  const isPlaying = !elements.bgmAudio.paused;
+
+  document.body.classList.toggle("music-playing", isPlaying);
+  elements.musicPlayer.classList.toggle("is-playing", isPlaying);
+  elements.musicToggle.setAttribute("aria-pressed", String(isPlaying));
+  elements.musicToggle.setAttribute("aria-label", isPlaying ? "暂停背景音乐" : "播放背景音乐");
+}
+
+async function playMusic({ announceFailure = false } = {}) {
+  try {
+    await elements.bgmAudio.play();
+    syncMusicState();
+    return true;
+  } catch (error) {
+    syncMusicState();
+
+    if (announceFailure) {
+      showStatus("点一下右上角的 BGM 按钮就能播放音乐。");
+    }
+
+    console.error(error);
+    return false;
+  }
+}
+
+function pauseMusic({ announce = false } = {}) {
+  elements.bgmAudio.pause();
+  syncMusicState();
+
+  if (announce) {
+    showStatus("背景音乐已暂停。");
+  }
+}
+
 function applyWeddingData() {
   document.title = `${getFullNames()} | 婚礼邀请函`;
 
   document.querySelector("#opening-groom").textContent = weddingData.couple.groom;
   document.querySelector("#opening-bride").textContent = weddingData.couple.bride;
   document.querySelector("#opening-date").textContent = weddingData.event.displayDate;
+  elements.openingMusicHint.textContent = weddingData.soundtrack.hint;
   document.querySelector("#hero-eyebrow").textContent = weddingData.hero.eyebrow;
   document.querySelector("#hero-title").textContent = weddingData.hero.title;
   document.querySelector("#hero-names").textContent = getFullNames();
@@ -153,15 +195,19 @@ function applyWeddingData() {
   document.querySelector("#venue-note").textContent = weddingData.event.venueNote;
   document.querySelector("#closing-title").textContent = weddingData.closing.title;
   document.querySelector("#closing-note").textContent = weddingData.closing.note;
+  elements.musicTitle.textContent = weddingData.soundtrack.title;
+  elements.musicArtist.textContent = weddingData.soundtrack.artist;
+  elements.bgmAudio.src = weddingData.soundtrack.src;
+  elements.bgmAudio.volume = 0.72;
 
   elements.invitationCopy.innerHTML = weddingData.invitationLines
-    .map((line) => `<p>${line}</p>`)
+    .map((line, index) => `<p style="--item-index:${index};">${line}</p>`)
     .join("");
 
   elements.highlightGrid.innerHTML = weddingData.highlights
     .map(
-      (item) => `
-        <article class="highlight-item">
+      (item, index) => `
+        <article class="highlight-item" style="--item-index:${index};">
           <p class="highlight-item__label">${item.label}</p>
           <p class="highlight-item__value">${item.value}</p>
         </article>
@@ -171,8 +217,8 @@ function applyWeddingData() {
 
   elements.tipsList.innerHTML = weddingData.tips
     .map(
-      (tip) => `
-        <li class="reminder-list__item">
+      (tip, index) => `
+        <li class="reminder-list__item" style="--item-index:${index};">
           <span class="reminder-list__mark" aria-hidden="true"></span>
           <span>${tip}</span>
         </li>
@@ -205,9 +251,10 @@ function buildGallery() {
 
   elements.galleryGrid.innerHTML = galleryItems
     .map(
-      (item) => `
+      (item, index) => `
         <article
           class="gallery-card"
+          style="--item-index:${index % 6};"
           tabindex="0"
           aria-label="${item.caption}"
           data-gallery-trigger
@@ -218,7 +265,7 @@ function buildGallery() {
             class="gallery-card__image"
             src="${item.src}"
             alt="${item.caption}"
-            loading="eager"
+            loading="lazy"
             decoding="async"
           />
         </article>
@@ -228,10 +275,11 @@ function buildGallery() {
 }
 
 function wireInteractions() {
-  elements.openInvitation.addEventListener("click", () => {
+  elements.openInvitation.addEventListener("click", async () => {
     document.body.classList.remove("is-locked");
     document.body.classList.add("is-unsealed");
     elements.openingScreen.setAttribute("aria-hidden", "true");
+    await playMusic({ announceFailure: true });
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -284,6 +332,27 @@ function wireInteractions() {
     copyText(window.location.href, "喜帖链接已复制。");
   });
 
+  elements.musicToggle.addEventListener("click", async () => {
+    if (elements.bgmAudio.paused) {
+      const played = await playMusic({ announceFailure: true });
+
+      if (played) {
+        showStatus(`背景音乐已播放：${weddingData.soundtrack.title}。`);
+      }
+
+      return;
+    }
+
+    pauseMusic({ announce: true });
+  });
+
+  elements.bgmAudio.addEventListener("play", syncMusicState);
+  elements.bgmAudio.addEventListener("pause", syncMusicState);
+  elements.bgmAudio.addEventListener("error", () => {
+    syncMusicState();
+    showStatus("音乐资源加载出了点岔子，稍后再试一下。");
+  });
+
   setupLightbox({
     dialog: elements.dialog,
     imageElement: elements.dialogImage,
@@ -309,9 +378,17 @@ function boot() {
   buildGallery();
   wireInteractions();
   const stopCountdown = wireCountdown();
-  setupReveal([...document.querySelectorAll(".reveal")]);
+  const stopReveal = setupReveal([...document.querySelectorAll(".reveal")]);
 
-  window.addEventListener("pagehide", stopCountdown, { once: true });
+  window.addEventListener(
+    "pagehide",
+    () => {
+      stopCountdown();
+      stopReveal();
+      pauseMusic();
+    },
+    { once: true }
+  );
 }
 
 boot();
