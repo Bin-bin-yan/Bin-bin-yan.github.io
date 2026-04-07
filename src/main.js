@@ -55,6 +55,8 @@ const runtime = {
 };
 
 let statusTimer = 0;
+const TRANSPARENT_PLACEHOLDER =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
 function wait(milliseconds) {
   return new Promise((resolve) => {
@@ -471,6 +473,7 @@ function buildGallery() {
         >
           <img
             class="gallery-card__image"
+            src="${TRANSPARENT_PLACEHOLDER}"
             alt="${item.caption}"
             data-gallery-src="${item.src}"
             loading="lazy"
