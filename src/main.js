@@ -405,11 +405,22 @@ function buildGallery() {
   }));
 
   const coverImage = galleryItems.find((item) => item.isCover) || galleryItems[0];
+  const heroImageSource = weddingData.hero.imageSrc
+    ? {
+        src: weddingData.hero.imageSrc,
+        alt: weddingData.hero.imageAlt || `${getFullNames()} 的婚礼封面照`,
+      }
+    : coverImage
+      ? {
+          src: coverImage.src,
+          alt: `${getFullNames()} 的婚礼封面照`,
+        }
+      : null;
 
-  if (coverImage) {
-    elements.heroImage.src = coverImage.src;
-    elements.heroImage.alt = `${getFullNames()} 的婚礼封面照`;
-    primeHeroImage(coverImage.src).finally(() => {
+  if (heroImageSource) {
+    elements.heroImage.src = heroImageSource.src;
+    elements.heroImage.alt = heroImageSource.alt;
+    primeHeroImage(heroImageSource.src).finally(() => {
       scheduleAudioWarmup();
       startGalleryLoading();
     });

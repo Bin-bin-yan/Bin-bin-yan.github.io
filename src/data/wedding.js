@@ -9,6 +9,8 @@ export const weddingData = {
     eyebrow: "Wedding Invitation",
     title: "我们结婚啦",
     lead: "这一封喜帖，想郑重地交到每一位亲友手中，邀请您见证我们的欢喜与奔赴。",
+    imageSrc: "./assets/images/gallery/wedding-01.jpg",
+    imageAlt: "闫斌斌与谷晓敏的婚礼封面照",
   },
   event: {
     isoDate: "2026-05-03T00:00:00+08:00",
@@ -23,7 +25,7 @@ export const weddingData = {
   soundtrack: {
     title: "My Only",
     artist: "周深",
-    src: "./assets/audio/my-only-compact.mp3",
+    src: "./assets/audio/april-07-bgm.mp3",
     hint: "启封后将播放 BGM · My Only - 周深",
   },
   invitationLines: [
