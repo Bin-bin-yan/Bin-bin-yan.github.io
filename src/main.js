@@ -14,7 +14,6 @@ const elements = {
   copyVenueButton: document.querySelector("#copy-venue"),
   copyLinkButton: document.querySelector("#copy-link"),
   heroImage: document.querySelector("#hero-image"),
-  gallerySection: document.querySelector(".reveal--gallery"),
   invitationCopy: document.querySelector("#invitation-copy"),
   highlightGrid: document.querySelector("#highlight-grid"),
   galleryGrid: document.querySelector("#gallery-grid"),
@@ -55,8 +54,7 @@ const runtime = {
 };
 
 let statusTimer = 0;
-const TRANSPARENT_PLACEHOLDER =
-  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+const WHITE_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 10'%3E%3Crect width='16' height='10' fill='%23fffaf8'/%3E%3C/svg%3E";
 
 function wait(milliseconds) {
   return new Promise((resolve) => {
@@ -304,44 +302,6 @@ async function streamGalleryImages() {
   }
 }
 
-function setupGalleryStreaming() {
-  if (!elements.gallerySection) {
-    return () => {};
-  }
-
-  let observer = null;
-
-  const startStream = () => {
-    void streamGalleryImages();
-    observer?.disconnect();
-  };
-
-  if (!("IntersectionObserver" in window)) {
-    startStream();
-    return () => {};
-  }
-
-  observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) {
-          return;
-        }
-
-        startStream();
-      });
-    },
-    {
-      rootMargin: "0px 0px 45% 0px",
-      threshold: 0.01,
-    }
-  );
-
-  observer.observe(elements.gallerySection);
-
-  return () => observer.disconnect();
-}
-
 function syncMusicState() {
   const isPlaying = !elements.bgmAudio.paused;
 
@@ -453,10 +413,14 @@ function buildGallery() {
   if (coverImage) {
     elements.heroImage.src = coverImage.src;
     elements.heroImage.alt = `${getFullNames()} 的婚礼封面照`;
-    primeHeroImage(coverImage.src).finally(scheduleAudioWarmup);
+    primeHeroImage(coverImage.src).finally(() => {
+      scheduleAudioWarmup();
+      void streamGalleryImages();
+    });
   } else {
     runtime.heroReady = true;
     scheduleAudioWarmup();
+    void streamGalleryImages();
   }
 
   elements.galleryGrid.innerHTML = galleryItems
@@ -473,7 +437,7 @@ function buildGallery() {
         >
           <img
             class="gallery-card__image"
-            src="${TRANSPARENT_PLACEHOLDER}"
+            src="${WHITE_PLACEHOLDER}"
             alt="${item.caption}"
             data-gallery-src="${item.src}"
             loading="lazy"
@@ -613,14 +577,12 @@ function boot() {
   wireInteractions();
   const stopCountdown = wireCountdown();
   const stopReveal = setupReveal([...document.querySelectorAll(".reveal")]);
-  const stopGalleryStreaming = setupGalleryStreaming();
 
   window.addEventListener(
     "pagehide",
     () => {
       stopCountdown();
       stopReveal();
-      stopGalleryStreaming();
       pauseMusic();
     },
     { once: true }
