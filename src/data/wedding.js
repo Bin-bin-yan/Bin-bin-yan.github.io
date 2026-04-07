@@ -23,7 +23,7 @@ export const weddingData = {
   soundtrack: {
     title: "My Only",
     artist: "周深",
-    src: "./assets/audio/my-only-zhou-shen.mp3",
+    src: "./assets/audio/my-only-compact.mp3",
     hint: "启封后将播放 BGM · My Only - 周深",
   },
   invitationLines: [

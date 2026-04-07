@@ -14,6 +14,12 @@
     <title>婚礼邀请函</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="preload"
+      as="image"
+      href="./assets/images/gallery/wedding-01.jpg"
+      fetchpriority="high"
+    />
     <link rel="stylesheet" href="./src/styles/main.css" />
   </head>
   <body class="is-locked">
@@ -65,7 +71,7 @@
           <span></span>
         </span>
       </button>
-      <audio id="bgm-audio" loop preload="none"></audio>
+      <audio id="bgm-audio" loop preload="metadata"></audio>
     </aside>
 
     <main class="site">
@@ -96,6 +102,7 @@
               src="./assets/images/gallery/wedding-01.jpg"
               alt="婚礼封面照"
               loading="eager"
+              fetchpriority="high"
               decoding="async"
             />
             <div class="hero__stamp">

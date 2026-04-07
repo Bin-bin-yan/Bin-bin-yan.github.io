@@ -14,6 +14,7 @@ const elements = {
   copyVenueButton: document.querySelector("#copy-venue"),
   copyLinkButton: document.querySelector("#copy-link"),
   heroImage: document.querySelector("#hero-image"),
+  gallerySection: document.querySelector(".reveal--gallery"),
   invitationCopy: document.querySelector("#invitation-copy"),
   highlightGrid: document.querySelector("#highlight-grid"),
   galleryGrid: document.querySelector("#gallery-grid"),
@@ -46,9 +47,20 @@ const formatters = {
 
 const runtime = {
   isWeChat: /MicroMessenger/i.test(window.navigator.userAgent),
+  heroReady: false,
+  audioReady: false,
+  heroWarmupPromise: Promise.resolve(),
+  audioWarmupPromise: null,
+  galleryStreamStarted: false,
 };
 
 let statusTimer = 0;
+
+function wait(milliseconds) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, milliseconds);
+  });
+}
 
 function getFullNames() {
   return `${weddingData.couple.groom} · ${weddingData.couple.bride}`;
@@ -140,6 +152,194 @@ function downloadCalendarFile() {
   URL.revokeObjectURL(downloadUrl);
 }
 
+function primeHeroImage(src) {
+  runtime.heroReady = false;
+
+  runtime.heroWarmupPromise = new Promise((resolve) => {
+    if (!src) {
+      runtime.heroReady = true;
+      resolve();
+      return;
+    }
+
+    const preloadImage = new Image();
+    let settled = false;
+
+    const finish = () => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      runtime.heroReady = true;
+      resolve();
+    };
+
+    preloadImage.fetchPriority = "high";
+    preloadImage.decoding = "async";
+    preloadImage.src = src;
+
+    if (preloadImage.complete) {
+      finish();
+      return;
+    }
+
+    preloadImage.addEventListener("load", finish, { once: true });
+    preloadImage.addEventListener("error", finish, { once: true });
+
+    if (typeof preloadImage.decode === "function") {
+      preloadImage.decode().then(finish).catch(() => {});
+    }
+  });
+
+  return runtime.heroWarmupPromise;
+}
+
+function primeAudioPlayback() {
+  if (runtime.audioWarmupPromise) {
+    return runtime.audioWarmupPromise;
+  }
+
+  runtime.audioWarmupPromise = new Promise((resolve) => {
+    const finish = () => {
+      runtime.audioReady = elements.bgmAudio.readyState >= 3;
+      resolve();
+    };
+
+    if (elements.bgmAudio.readyState >= 3) {
+      finish();
+      return;
+    }
+
+    const cleanup = () => {
+      elements.bgmAudio.removeEventListener("canplaythrough", handleReady);
+      elements.bgmAudio.removeEventListener("loadeddata", handleReady);
+      elements.bgmAudio.removeEventListener("error", handleReady);
+    };
+
+    const handleReady = () => {
+      cleanup();
+      finish();
+    };
+
+    elements.bgmAudio.addEventListener("canplaythrough", handleReady, { once: true });
+    elements.bgmAudio.addEventListener("loadeddata", handleReady, { once: true });
+    elements.bgmAudio.addEventListener("error", handleReady, { once: true });
+    elements.bgmAudio.preload = "auto";
+    elements.bgmAudio.load();
+  });
+
+  return runtime.audioWarmupPromise;
+}
+
+function scheduleAudioWarmup() {
+  const startWarmup = () => {
+    void primeAudioPlayback();
+  };
+
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(startWarmup, { timeout: 1200 });
+    return;
+  }
+
+  window.setTimeout(startWarmup, 260);
+}
+
+function loadGalleryImage(imageElement) {
+  return new Promise((resolve) => {
+    if (!imageElement || imageElement.dataset.loaded === "true") {
+      resolve();
+      return;
+    }
+
+    const source = imageElement.dataset.gallerySrc || imageElement.getAttribute("data-gallery-src");
+
+    if (!source) {
+      resolve();
+      return;
+    }
+
+    const parentCard = imageElement.closest(".gallery-card");
+    let settled = false;
+
+    const finish = () => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      imageElement.dataset.loaded = "true";
+      imageElement.classList.add("is-loaded");
+      parentCard?.classList.remove("gallery-card--loading");
+      resolve();
+    };
+
+    imageElement.addEventListener("load", finish, { once: true });
+    imageElement.addEventListener("error", finish, { once: true });
+    imageElement.src = source;
+
+    if (imageElement.complete) {
+      finish();
+    }
+  });
+}
+
+async function streamGalleryImages() {
+  if (runtime.galleryStreamStarted) {
+    return;
+  }
+
+  runtime.galleryStreamStarted = true;
+
+  const galleryImages = [...elements.galleryGrid.querySelectorAll("[data-gallery-src]")];
+
+  for (const [index, imageElement] of galleryImages.entries()) {
+    await loadGalleryImage(imageElement);
+
+    if (index < galleryImages.length - 1) {
+      await wait(90);
+    }
+  }
+}
+
+function setupGalleryStreaming() {
+  if (!elements.gallerySection) {
+    return () => {};
+  }
+
+  let observer = null;
+
+  const startStream = () => {
+    void streamGalleryImages();
+    observer?.disconnect();
+  };
+
+  if (!("IntersectionObserver" in window)) {
+    startStream();
+    return () => {};
+  }
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) {
+          return;
+        }
+
+        startStream();
+      });
+    },
+    {
+      rootMargin: "0px 0px 45% 0px",
+      threshold: 0.01,
+    }
+  );
+
+  observer.observe(elements.gallerySection);
+
+  return () => observer.disconnect();
+}
+
 function syncMusicState() {
   const isPlaying = !elements.bgmAudio.paused;
 
@@ -151,6 +351,10 @@ function syncMusicState() {
 
 async function playMusic({ announceFailure = false } = {}) {
   try {
+    if (!runtime.audioReady) {
+      await Promise.race([primeAudioPlayback(), wait(680)]);
+    }
+
     await elements.bgmAudio.play();
     syncMusicState();
     return true;
@@ -247,13 +451,17 @@ function buildGallery() {
   if (coverImage) {
     elements.heroImage.src = coverImage.src;
     elements.heroImage.alt = `${getFullNames()} 的婚礼封面照`;
+    primeHeroImage(coverImage.src).finally(scheduleAudioWarmup);
+  } else {
+    runtime.heroReady = true;
+    scheduleAudioWarmup();
   }
 
   elements.galleryGrid.innerHTML = galleryItems
     .map(
       (item, index) => `
         <article
-          class="gallery-card"
+          class="gallery-card gallery-card--loading"
           style="--item-index:${index % 6};"
           tabindex="0"
           aria-label="${item.caption}"
@@ -263,8 +471,8 @@ function buildGallery() {
         >
           <img
             class="gallery-card__image"
-            src="${item.src}"
             alt="${item.caption}"
+            data-gallery-src="${item.src}"
             loading="lazy"
             decoding="async"
           />
@@ -275,7 +483,24 @@ function buildGallery() {
 }
 
 function wireInteractions() {
+  const warmAudioOnIntent = () => {
+    void primeAudioPlayback();
+  };
+
+  elements.openInvitation.addEventListener("pointerdown", warmAudioOnIntent, {
+    once: true,
+    passive: true,
+  });
+  elements.musicToggle.addEventListener("pointerdown", warmAudioOnIntent, {
+    once: true,
+    passive: true,
+  });
+
   elements.openInvitation.addEventListener("click", async () => {
+    if (!runtime.heroReady) {
+      await Promise.race([runtime.heroWarmupPromise, wait(240)]);
+    }
+
     document.body.classList.remove("is-locked");
     document.body.classList.add("is-unsealed");
     elements.openingScreen.setAttribute("aria-hidden", "true");
@@ -349,6 +574,8 @@ function wireInteractions() {
   elements.bgmAudio.addEventListener("play", syncMusicState);
   elements.bgmAudio.addEventListener("pause", syncMusicState);
   elements.bgmAudio.addEventListener("error", () => {
+    runtime.audioReady = false;
+    runtime.audioWarmupPromise = null;
     syncMusicState();
     showStatus("音乐资源加载出了点岔子，稍后再试一下。");
   });
@@ -379,12 +606,14 @@ function boot() {
   wireInteractions();
   const stopCountdown = wireCountdown();
   const stopReveal = setupReveal([...document.querySelectorAll(".reveal")]);
+  const stopGalleryStreaming = setupGalleryStreaming();
 
   window.addEventListener(
     "pagehide",
     () => {
       stopCountdown();
       stopReveal();
+      stopGalleryStreaming();
       pauseMusic();
     },
     { once: true }
