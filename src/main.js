@@ -49,6 +49,7 @@ const runtime = {
   heroReady: false,
   audioReady: false,
   audioPlaybackConfirmed: false,
+  wechatBridgeReady: typeof window.WeixinJSBridge !== "undefined",
   heroWarmupPromise: Promise.resolve(),
   audioWarmupPromise: null,
   galleryStreamStarted: false,
@@ -289,11 +290,13 @@ function waitForWeChatBridge(timeout = 1200) {
     }
 
     if (typeof window.WeixinJSBridge !== "undefined") {
+      runtime.wechatBridgeReady = true;
       resolve(true);
       return;
     }
 
     const handleReady = () => {
+      runtime.wechatBridgeReady = true;
       cleanup();
       resolve(true);
     };
@@ -305,7 +308,8 @@ function waitForWeChatBridge(timeout = 1200) {
 
     const timer = window.setTimeout(() => {
       cleanup();
-      resolve(typeof window.WeixinJSBridge !== "undefined");
+      runtime.wechatBridgeReady = typeof window.WeixinJSBridge !== "undefined";
+      resolve(runtime.wechatBridgeReady);
     }, timeout);
 
     document.addEventListener("WeixinJSBridgeReady", handleReady, { once: true });
@@ -322,6 +326,7 @@ async function playMusicWithWeChatBridge() {
   return new Promise((resolve) => {
     window.WeixinJSBridge.invoke("getNetworkType", {}, async () => {
       try {
+        elements.bgmAudio.currentTime = 0;
         await elements.bgmAudio.play();
         resolve(await waitForAudioProgress(1500));
       } catch (error) {
@@ -330,6 +335,12 @@ async function playMusicWithWeChatBridge() {
       }
     });
   });
+}
+
+async function attemptDirectAudioPlay() {
+  elements.bgmAudio.currentTime = 0;
+  await elements.bgmAudio.play();
+  return waitForAudioProgress();
 }
 
 function loadGalleryImage(imageElement) {
@@ -400,11 +411,16 @@ async function playMusic({ announceFailure = false } = {}) {
     }
 
     runtime.audioPlaybackConfirmed = false;
-    await elements.bgmAudio.play();
-    let started = await waitForAudioProgress();
+    let started = false;
 
-    if (!started && runtime.isWeChat) {
+    if (runtime.isWeChat) {
       started = await playMusicWithWeChatBridge();
+
+      if (!started) {
+        started = await attemptDirectAudioPlay();
+      }
+    } else {
+      started = await attemptDirectAudioPlay();
     }
 
     runtime.audioPlaybackConfirmed = started;
@@ -518,7 +534,7 @@ function buildGallery() {
         }
       : null;
   const galleryItems = galleryManifest
-    .filter((item) => item.src !== heroImageSource?.src)
+    .filter((item) => !item.isCover && item.src !== heroImageSource?.src)
     .map((item, index) => ({
       ...item,
       caption: `${getFullNames()} · 婚纱照 ${String(index + 1).padStart(2, "0")}`,
@@ -567,6 +583,17 @@ function wireInteractions() {
   const warmAudioOnIntent = () => {
     void primeAudioPlayback();
   };
+
+  if (runtime.isWeChat) {
+    document.addEventListener(
+      "WeixinJSBridgeReady",
+      () => {
+        runtime.wechatBridgeReady = true;
+        void primeAudioPlayback();
+      },
+      { once: true }
+    );
+  }
 
   elements.openInvitation.addEventListener("pointerdown", warmAudioOnIntent, {
     once: true,
