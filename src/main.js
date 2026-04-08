@@ -50,6 +50,7 @@ const runtime = {
   audioReady: false,
   audioPlaybackConfirmed: false,
   wechatBridgeReady: typeof window.WeixinJSBridge !== "undefined",
+  gesturePlayPromise: null,
   heroWarmupPromise: Promise.resolve(),
   audioWarmupPromise: null,
   galleryStreamStarted: false,
@@ -337,6 +338,32 @@ async function playMusicWithWeChatBridge() {
   });
 }
 
+function kickAudioPlayThroughImage() {
+  return new Promise((resolve) => {
+    const kickImage = new Image();
+    let settled = false;
+
+    const finish = async () => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+
+      try {
+        resolve(await attemptDirectAudioPlay());
+      } catch (error) {
+        console.error(error);
+        resolve(false);
+      }
+    };
+
+    kickImage.onload = finish;
+    kickImage.onerror = finish;
+    kickImage.src = TRANSPARENT_PLACEHOLDER;
+  });
+}
+
 async function attemptDirectAudioPlay() {
   elements.bgmAudio.currentTime = 0;
   await elements.bgmAudio.play();
@@ -447,6 +474,39 @@ async function playMusic({ announceFailure = false } = {}) {
   }
 
   return false;
+}
+
+function startGesturePlayback() {
+  if (runtime.gesturePlayPromise) {
+    return runtime.gesturePlayPromise;
+  }
+
+  runtime.gesturePlayPromise = (async () => {
+    runtime.audioPlaybackConfirmed = false;
+
+    try {
+      if (!runtime.audioReady) {
+        void primeAudioPlayback();
+      }
+
+      const started = runtime.isWeChat
+        ? await kickAudioPlayThroughImage()
+        : await attemptDirectAudioPlay();
+
+      runtime.audioPlaybackConfirmed = started;
+      syncMusicState();
+      return started;
+    } catch (error) {
+      console.error(error);
+      runtime.audioPlaybackConfirmed = false;
+      syncMusicState();
+      return false;
+    } finally {
+      runtime.gesturePlayPromise = null;
+    }
+  })();
+
+  return runtime.gesturePlayPromise;
 }
 
 function pauseMusic({ announce = false } = {}) {
@@ -584,6 +644,14 @@ function wireInteractions() {
     void primeAudioPlayback();
   };
 
+  const warmAndPlayOnFirstIntent = () => {
+    warmAudioOnIntent();
+
+    if (elements.bgmAudio.paused) {
+      void startGesturePlayback();
+    }
+  };
+
   if (runtime.isWeChat) {
     document.addEventListener(
       "WeixinJSBridgeReady",
@@ -603,6 +671,14 @@ function wireInteractions() {
     once: true,
     passive: true,
   });
+  elements.openInvitation.addEventListener("touchstart", warmAndPlayOnFirstIntent, {
+    once: true,
+    passive: true,
+  });
+  elements.musicToggle.addEventListener("touchstart", warmAndPlayOnFirstIntent, {
+    once: true,
+    passive: true,
+  });
 
   elements.openInvitation.addEventListener("click", async () => {
     if (!runtime.heroReady) {
@@ -612,7 +688,16 @@ function wireInteractions() {
     document.body.classList.remove("is-locked");
     document.body.classList.add("is-unsealed");
     elements.openingScreen.setAttribute("aria-hidden", "true");
-    await playMusic({ announceFailure: true });
+    const played =
+      runtime.audioPlaybackConfirmed || !elements.bgmAudio.paused
+        ? true
+        : runtime.gesturePlayPromise
+          ? await runtime.gesturePlayPromise
+          : await playMusic({ announceFailure: true });
+
+    if (!played) {
+      await playMusic({ announceFailure: true });
+    }
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -671,7 +756,16 @@ function wireInteractions() {
 
   elements.musicToggle.addEventListener("click", async () => {
     if (elements.bgmAudio.paused) {
-      const played = await playMusic({ announceFailure: true });
+      let played =
+        runtime.audioPlaybackConfirmed || !elements.bgmAudio.paused
+          ? true
+          : runtime.gesturePlayPromise
+            ? await runtime.gesturePlayPromise
+            : await playMusic({ announceFailure: true });
+
+      if (!played) {
+        played = await playMusic({ announceFailure: true });
+      }
 
       if (played) {
         showStatus(`背景音乐已播放：${weddingData.soundtrack.title}。`);
