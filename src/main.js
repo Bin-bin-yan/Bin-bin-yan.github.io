@@ -493,6 +493,11 @@ function startGesturePlayback() {
         ? await kickAudioPlayThroughImage()
         : await attemptDirectAudioPlay();
 
+      if (!started) {
+        elements.bgmAudio.pause();
+        elements.bgmAudio.currentTime = 0;
+      }
+
       runtime.audioPlaybackConfirmed = started;
       syncMusicState();
       return started;
@@ -689,7 +694,7 @@ function wireInteractions() {
     document.body.classList.add("is-unsealed");
     elements.openingScreen.setAttribute("aria-hidden", "true");
     const played =
-      runtime.audioPlaybackConfirmed || !elements.bgmAudio.paused
+      runtime.audioPlaybackConfirmed
         ? true
         : runtime.gesturePlayPromise
           ? await runtime.gesturePlayPromise
@@ -757,7 +762,7 @@ function wireInteractions() {
   elements.musicToggle.addEventListener("click", async () => {
     if (elements.bgmAudio.paused) {
       let played =
-        runtime.audioPlaybackConfirmed || !elements.bgmAudio.paused
+        runtime.audioPlaybackConfirmed
           ? true
           : runtime.gesturePlayPromise
             ? await runtime.gesturePlayPromise
