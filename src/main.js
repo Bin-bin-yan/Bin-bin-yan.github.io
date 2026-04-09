@@ -50,15 +50,17 @@ const runtime = {
   audioReady: false,
   audioPlaybackConfirmed: false,
   wechatBridgeReady: typeof window.WeixinJSBridge !== "undefined",
-  gesturePlayPromise: null,
+  playAttemptPromise: null,
   heroWarmupPromise: Promise.resolve(),
   audioWarmupPromise: null,
   galleryStreamStarted: false,
+  galleryStartScheduled: false,
 };
 
 let statusTimer = 0;
 const TRANSPARENT_PLACEHOLDER =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+const MUSIC_PLAYER_COMPACT_SCROLL_Y = 112;
 
 function wait(milliseconds) {
   return new Promise((resolve) => {
@@ -200,37 +202,60 @@ function primeHeroImage(src) {
 }
 
 function primeAudioPlayback() {
+  if (runtime.audioReady || elements.bgmAudio.readyState >= 2) {
+    runtime.audioReady = true;
+    return Promise.resolve(true);
+  }
+
   if (runtime.audioWarmupPromise) {
     return runtime.audioWarmupPromise;
   }
 
+  // Warmup should only hint the browser to fetch more data. Calling load() here
+  // would abort an in-flight play() promise and make the first tap race itself.
   runtime.audioWarmupPromise = new Promise((resolve) => {
-    const finish = () => {
-      runtime.audioReady = elements.bgmAudio.readyState >= 3;
-      resolve();
+    let settled = false;
+    let timeoutTimer = 0;
+    let handleReady;
+    let handleError;
+
+    const cleanup = () => {
+      window.clearTimeout(timeoutTimer);
+      elements.bgmAudio.removeEventListener("canplay", handleReady);
+      elements.bgmAudio.removeEventListener("loadeddata", handleReady);
+      elements.bgmAudio.removeEventListener("canplaythrough", handleReady);
+      elements.bgmAudio.removeEventListener("error", handleError);
     };
 
-    if (elements.bgmAudio.readyState >= 3) {
-      finish();
+    const finish = (isReady) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      cleanup();
+      runtime.audioReady = isReady;
+      runtime.audioWarmupPromise = null;
+      resolve(isReady);
+    };
+
+    if (elements.bgmAudio.readyState >= 2) {
+      finish(true);
       return;
     }
 
-    const cleanup = () => {
-      elements.bgmAudio.removeEventListener("canplaythrough", handleReady);
-      elements.bgmAudio.removeEventListener("loadeddata", handleReady);
-      elements.bgmAudio.removeEventListener("error", handleReady);
-    };
+    handleReady = () => finish(elements.bgmAudio.readyState >= 2);
+    handleError = () => finish(false);
+    timeoutTimer = window.setTimeout(
+      () => finish(elements.bgmAudio.readyState >= 2),
+      1200
+    );
 
-    const handleReady = () => {
-      cleanup();
-      finish();
-    };
-
-    elements.bgmAudio.addEventListener("canplaythrough", handleReady, { once: true });
-    elements.bgmAudio.addEventListener("loadeddata", handleReady, { once: true });
-    elements.bgmAudio.addEventListener("error", handleReady, { once: true });
     elements.bgmAudio.preload = "auto";
-    elements.bgmAudio.load();
+    elements.bgmAudio.addEventListener("canplay", handleReady, { once: true });
+    elements.bgmAudio.addEventListener("loadeddata", handleReady, { once: true });
+    elements.bgmAudio.addEventListener("canplaythrough", handleReady, { once: true });
+    elements.bgmAudio.addEventListener("error", handleError, { once: true });
   });
 
   return runtime.audioWarmupPromise;
@@ -249,13 +274,14 @@ function scheduleAudioWarmup() {
   window.setTimeout(startWarmup, 260);
 }
 
-function waitForAudioProgress(timeout = 1400) {
+// `playing` fires when the stream actually starts or resumes, so it is a safer
+// first-play confirmation than guessing from a short `timeupdate` timeout.
+function waitForPlaybackStart(timeout = 2400) {
   return new Promise((resolve) => {
-    const startTime = elements.bgmAudio.currentTime;
+    const hasStartedPlayback = () =>
+      !elements.bgmAudio.paused &&
+      (elements.bgmAudio.currentTime > 0 || elements.bgmAudio.readyState >= 3);
     let settled = false;
-
-    const hasProgress = () =>
-      !elements.bgmAudio.paused && elements.bgmAudio.currentTime > startTime + 0.01;
 
     const finish = (result) => {
       if (settled) {
@@ -263,73 +289,36 @@ function waitForAudioProgress(timeout = 1400) {
       }
 
       settled = true;
-      window.clearInterval(progressTimer);
       window.clearTimeout(timeoutTimer);
-      elements.bgmAudio.removeEventListener("timeupdate", handleProgress);
+      elements.bgmAudio.removeEventListener("playing", handlePlaying);
+      elements.bgmAudio.removeEventListener("error", handleFailure);
       resolve(result);
     };
 
-    const handleProgress = () => {
-      if (hasProgress()) {
+    const handlePlaying = () => {
+      if (hasStartedPlayback()) {
         finish(true);
       }
     };
 
-    const progressTimer = window.setInterval(handleProgress, 120);
-    const timeoutTimer = window.setTimeout(() => finish(hasProgress()), timeout);
+    const handleFailure = () => finish(false);
+    const timeoutTimer = window.setTimeout(() => finish(hasStartedPlayback()), timeout);
 
-    elements.bgmAudio.addEventListener("timeupdate", handleProgress);
-    handleProgress();
-  });
-}
-
-function waitForWeChatBridge(timeout = 1200) {
-  return new Promise((resolve) => {
-    if (!runtime.isWeChat) {
-      resolve(false);
-      return;
-    }
-
-    if (typeof window.WeixinJSBridge !== "undefined") {
-      runtime.wechatBridgeReady = true;
-      resolve(true);
-      return;
-    }
-
-    const handleReady = () => {
-      runtime.wechatBridgeReady = true;
-      cleanup();
-      resolve(true);
-    };
-
-    const cleanup = () => {
-      window.clearTimeout(timer);
-      document.removeEventListener("WeixinJSBridgeReady", handleReady);
-    };
-
-    const timer = window.setTimeout(() => {
-      cleanup();
-      runtime.wechatBridgeReady = typeof window.WeixinJSBridge !== "undefined";
-      resolve(runtime.wechatBridgeReady);
-    }, timeout);
-
-    document.addEventListener("WeixinJSBridgeReady", handleReady, { once: true });
+    elements.bgmAudio.addEventListener("playing", handlePlaying, { once: true });
+    elements.bgmAudio.addEventListener("error", handleFailure, { once: true });
+    handlePlaying();
   });
 }
 
 async function playMusicWithWeChatBridge() {
-  const bridgeReady = await waitForWeChatBridge();
-
-  if (!bridgeReady || typeof window.WeixinJSBridge?.invoke !== "function") {
+  if (!runtime.wechatBridgeReady || typeof window.WeixinJSBridge?.invoke !== "function") {
     return false;
   }
 
   return new Promise((resolve) => {
     window.WeixinJSBridge.invoke("getNetworkType", {}, async () => {
       try {
-        elements.bgmAudio.currentTime = 0;
-        await elements.bgmAudio.play();
-        resolve(await waitForAudioProgress(1500));
+        resolve(await attemptDirectAudioPlay());
       } catch (error) {
         console.error(error);
         resolve(false);
@@ -338,36 +327,10 @@ async function playMusicWithWeChatBridge() {
   });
 }
 
-function kickAudioPlayThroughImage() {
-  return new Promise((resolve) => {
-    const kickImage = new Image();
-    let settled = false;
-
-    const finish = async () => {
-      if (settled) {
-        return;
-      }
-
-      settled = true;
-
-      try {
-        resolve(await attemptDirectAudioPlay());
-      } catch (error) {
-        console.error(error);
-        resolve(false);
-      }
-    };
-
-    kickImage.onload = finish;
-    kickImage.onerror = finish;
-    kickImage.src = TRANSPARENT_PLACEHOLDER;
-  });
-}
-
 async function attemptDirectAudioPlay() {
-  elements.bgmAudio.currentTime = 0;
   await elements.bgmAudio.play();
-  return waitForAudioProgress();
+  runtime.audioReady = true;
+  return waitForPlaybackStart();
 }
 
 function loadGalleryImage(imageElement) {
@@ -422,6 +385,43 @@ function startGalleryLoading() {
   });
 }
 
+function scheduleGalleryLoading({ deferUntilPlayback = false } = {}) {
+  if (runtime.galleryStreamStarted || runtime.galleryStartScheduled) {
+    return;
+  }
+
+  const startLoading = () => {
+    runtime.galleryStartScheduled = false;
+    startGalleryLoading();
+  };
+
+  runtime.galleryStartScheduled = true;
+
+  // The first visible interaction should serve audio first. Gallery requests can
+  // wait a beat so they don't compete with the very first music buffer.
+  if (deferUntilPlayback && !runtime.audioPlaybackConfirmed) {
+    const handlePlaying = () => {
+      cleanup();
+      startLoading();
+    };
+
+    const cleanup = () => {
+      window.clearTimeout(timer);
+      elements.bgmAudio.removeEventListener("playing", handlePlaying);
+    };
+
+    const timer = window.setTimeout(() => {
+      cleanup();
+      startLoading();
+    }, 1600);
+
+    elements.bgmAudio.addEventListener("playing", handlePlaying, { once: true });
+    return;
+  }
+
+  window.setTimeout(startLoading, 320);
+}
+
 function syncMusicState() {
   const isPlaying = runtime.audioPlaybackConfirmed && !elements.bgmAudio.paused;
 
@@ -431,87 +431,71 @@ function syncMusicState() {
   elements.musicToggle.setAttribute("aria-label", isPlaying ? "暂停背景音乐" : "播放背景音乐");
 }
 
-async function playMusic({ announceFailure = false } = {}) {
-  try {
-    if (!runtime.audioReady) {
-      await Promise.race([primeAudioPlayback(), wait(680)]);
-    }
+function syncMusicPlayerLayout() {
+  const shouldCompact =
+    document.body.classList.contains("is-unsealed") &&
+    window.matchMedia("(max-width: 767px)").matches &&
+    window.scrollY > MUSIC_PLAYER_COMPACT_SCROLL_Y;
 
-    runtime.audioPlaybackConfirmed = false;
-    let started = false;
-
-    if (runtime.isWeChat) {
-      started = await playMusicWithWeChatBridge();
-
-      if (!started) {
-        started = await attemptDirectAudioPlay();
-      }
-    } else {
-      started = await attemptDirectAudioPlay();
-    }
-
-    runtime.audioPlaybackConfirmed = started;
-    syncMusicState();
-
-    if (started) {
-      return true;
-    }
-
-    elements.bgmAudio.pause();
-  } catch (error) {
-    if (announceFailure) {
-      showStatus("点一下右上角的 BGM 按钮就能播放音乐。");
-    }
-
-    console.error(error);
-  }
-
-  runtime.audioPlaybackConfirmed = false;
-  syncMusicState();
-
-  if (announceFailure) {
-    showStatus("点一下右上角的 BGM 按钮就能播放音乐。");
-  }
-
-  return false;
+  document.body.classList.toggle("music-player-compact", shouldCompact);
 }
 
-function startGesturePlayback() {
-  if (runtime.gesturePlayPromise) {
-    return runtime.gesturePlayPromise;
+async function playMusic({ announceFailure = false } = {}) {
+  // Mobile browsers can deliver one tap as pointer + click. Funnel every
+  // audible play request through one promise so the first visit doesn't race itself.
+  if (runtime.playAttemptPromise) {
+    return runtime.playAttemptPromise;
   }
 
-  runtime.gesturePlayPromise = (async () => {
-    runtime.audioPlaybackConfirmed = false;
-
+  runtime.playAttemptPromise = (async () => {
     try {
       if (!runtime.audioReady) {
-        void primeAudioPlayback();
+        await Promise.race([primeAudioPlayback(), wait(680)]);
       }
 
-      const started = runtime.isWeChat
-        ? await kickAudioPlayThroughImage()
-        : await attemptDirectAudioPlay();
+      if (runtime.audioPlaybackConfirmed && !elements.bgmAudio.paused) {
+        syncMusicState();
+        return true;
+      }
 
-      if (!started) {
-        elements.bgmAudio.pause();
-        elements.bgmAudio.currentTime = 0;
+      runtime.audioPlaybackConfirmed = false;
+      syncMusicState();
+      let started = false;
+
+      if (runtime.isWeChat) {
+        started = await playMusicWithWeChatBridge();
+
+        if (!started) {
+          started = await attemptDirectAudioPlay();
+        }
+      } else {
+        started = await attemptDirectAudioPlay();
       }
 
       runtime.audioPlaybackConfirmed = started;
       syncMusicState();
+
+      if (!started && announceFailure) {
+        showStatus("点一下右上角的 BGM 按钮就能播放音乐。");
+      }
+
       return started;
     } catch (error) {
       console.error(error);
+
+      if (announceFailure) {
+        showStatus("点一下右上角的 BGM 按钮就能播放音乐。");
+      }
+
       runtime.audioPlaybackConfirmed = false;
       syncMusicState();
       return false;
     } finally {
-      runtime.gesturePlayPromise = null;
+      runtime.playAttemptPromise = null;
     }
   })();
 
-  return runtime.gesturePlayPromise;
+  return runtime.playAttemptPromise;
 }
 
 function pauseMusic({ announce = false } = {}) {
@@ -610,12 +594,10 @@ function buildGallery() {
     elements.heroImage.alt = heroImageSource.alt;
     primeHeroImage(heroImageSource.src).finally(() => {
       scheduleAudioWarmup();
-      startGalleryLoading();
     });
   } else {
     runtime.heroReady = true;
     scheduleAudioWarmup();
-    startGalleryLoading();
   }
 
   elements.galleryGrid.innerHTML = galleryItems
@@ -649,14 +631,6 @@ function wireInteractions() {
     void primeAudioPlayback();
   };
 
-  const warmAndPlayOnFirstIntent = () => {
-    warmAudioOnIntent();
-
-    if (elements.bgmAudio.paused) {
-      void startGesturePlayback();
-    }
-  };
-
   if (runtime.isWeChat) {
     document.addEventListener(
       "WeixinJSBridgeReady",
@@ -676,14 +650,6 @@ function wireInteractions() {
     once: true,
     passive: true,
   });
-  elements.openInvitation.addEventListener("touchstart", warmAndPlayOnFirstIntent, {
-    once: true,
-    passive: true,
-  });
-  elements.musicToggle.addEventListener("touchstart", warmAndPlayOnFirstIntent, {
-    once: true,
-    passive: true,
-  });
 
   elements.openInvitation.addEventListener("click", async () => {
     if (!runtime.heroReady) {
@@ -693,16 +659,9 @@ function wireInteractions() {
     document.body.classList.remove("is-locked");
     document.body.classList.add("is-unsealed");
     elements.openingScreen.setAttribute("aria-hidden", "true");
-    const played =
-      runtime.audioPlaybackConfirmed
-        ? true
-        : runtime.gesturePlayPromise
-          ? await runtime.gesturePlayPromise
-          : await playMusic({ announceFailure: true });
-
-    if (!played) {
-      await playMusic({ announceFailure: true });
-    }
+    syncMusicPlayerLayout();
+    const played = runtime.audioPlaybackConfirmed ? true : await playMusic({ announceFailure: true });
+    scheduleGalleryLoading({ deferUntilPlayback: !played });
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -760,17 +719,8 @@ function wireInteractions() {
   }
 
   elements.musicToggle.addEventListener("click", async () => {
-    if (elements.bgmAudio.paused) {
-      let played =
-        runtime.audioPlaybackConfirmed
-          ? true
-          : runtime.gesturePlayPromise
-            ? await runtime.gesturePlayPromise
-            : await playMusic({ announceFailure: true });
-
-      if (!played) {
-        played = await playMusic({ announceFailure: true });
-      }
+    if (elements.bgmAudio.paused || !runtime.audioPlaybackConfirmed) {
+      const played = await playMusic({ announceFailure: true });
 
       if (played) {
         showStatus(`背景音乐已播放：${weddingData.soundtrack.title}。`);
@@ -783,12 +733,14 @@ function wireInteractions() {
   });
 
   elements.bgmAudio.addEventListener("play", syncMusicState);
-  elements.bgmAudio.addEventListener("pause", syncMusicState);
-  elements.bgmAudio.addEventListener("timeupdate", () => {
-    if (!elements.bgmAudio.paused && elements.bgmAudio.currentTime > 0) {
-      runtime.audioPlaybackConfirmed = true;
-      syncMusicState();
-    }
+  elements.bgmAudio.addEventListener("playing", () => {
+    runtime.audioPlaybackConfirmed = true;
+    runtime.audioReady = true;
+    syncMusicState();
+  });
+  elements.bgmAudio.addEventListener("pause", () => {
+    runtime.audioPlaybackConfirmed = false;
+    syncMusicState();
   });
   elements.bgmAudio.addEventListener("error", () => {
     runtime.audioReady = false;
@@ -825,12 +777,17 @@ function boot() {
   const stopCountdown = wireCountdown();
   const stopReveal = setupReveal([...document.querySelectorAll(".reveal")]);
 
+  syncMusicPlayerLayout();
+  window.addEventListener("scroll", syncMusicPlayerLayout, { passive: true });
+  window.addEventListener("resize", syncMusicPlayerLayout);
+
   window.addEventListener(
     "pagehide",
     () => {
       stopCountdown();
       stopReveal();
       pauseMusic();
+      document.body.classList.remove("music-player-compact");
     },
     { once: true }
   );
