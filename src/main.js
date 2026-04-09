@@ -587,7 +587,6 @@ function applyWeddingData() {
 
 function buildGallery() {
   const coverImage = galleryManifest.find((item) => item.isCover) || galleryManifest[0];
-  const preferredGalleryFirstImage = "wedding-10.jpg";
   const requestedHeroAssetName = getGalleryAssetName(weddingData.hero.imageSrc);
   const heroManifestItem = galleryManifest.find((item) => item.assetName === requestedHeroAssetName) || coverImage;
   const heroImageSource = weddingData.hero.imageSrc
@@ -608,18 +607,7 @@ function buildGallery() {
       ...item,
       caption: `${getFullNames()} · 婚纱照 ${String(index + 1).padStart(2, "0")}`,
       aspectRatio: item.width && item.height ? `${item.width} / ${item.height}` : "4 / 5",
-    }))
-    .sort((leftItem, rightItem) => {
-      if (leftItem.assetName === preferredGalleryFirstImage) {
-        return -1;
-      }
-
-      if (rightItem.assetName === preferredGalleryFirstImage) {
-        return 1;
-      }
-
-      return 0;
-    });
+    }));
 
   if (heroImageSource) {
     elements.heroImage.src = heroImageSource.src;

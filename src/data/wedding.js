@@ -9,7 +9,7 @@ export const weddingData = {
     eyebrow: "Wedding Invitation",
     title: "我们结婚啦",
     lead: "这一封喜帖，想郑重地交到每一位亲友手中，邀请您见证我们的欢喜与奔赴。",
-    imageSrc: "./assets/images/gallery/wedding-04.jpg",
+    imageSrc: "./assets/images/gallery/wedding-00.jpg",
     imageAlt: "闫斌斌与谷晓敏的婚礼封面照",
   },
   event: {

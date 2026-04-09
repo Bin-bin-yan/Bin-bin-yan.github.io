@@ -157,7 +157,7 @@ $index = 0
 foreach ($file in $files) {
     $targetName = "wedding-{0:d2}.jpg" -f $index
     $targetPath = Join-Path -Path $resolvedOutput -ChildPath $targetName
-    $isCover = ($index -eq 1)
+    $isCover = ($index -eq 0)
     $maxWidth = if ($isCover) { $HeroMaxWidth } else { $GalleryMaxWidth }
     $quality = if ($isCover) { $HeroJpegQuality } else { $GalleryJpegQuality }
 
