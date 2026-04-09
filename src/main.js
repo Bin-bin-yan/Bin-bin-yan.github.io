@@ -68,6 +68,16 @@ function getFullNames() {
   return `${weddingData.couple.groom} · ${weddingData.couple.bride}`;
 }
 
+function getGalleryAssetName(source) {
+  if (!source) {
+    return "";
+  }
+
+  const normalizedSource = source.split("?")[0].split("#")[0];
+  const segments = normalizedSource.split("/");
+  return segments[segments.length - 1] || "";
+}
+
 function createMapUrl(query) {
   return `https://uri.amap.com/search?query=${encodeURIComponent(query)}`;
 }
@@ -577,7 +587,7 @@ function applyWeddingData() {
 
 function buildGallery() {
   const coverImage = galleryManifest.find((item) => item.isCover) || galleryManifest[0];
-  const preferredGalleryFirstImage = "./assets/images/gallery/wedding-10.jpg";
+  const preferredGalleryFirstImage = "wedding-10.jpg";
   const heroImageSource = weddingData.hero.imageSrc
     ? {
         src: weddingData.hero.imageSrc,
@@ -589,19 +599,20 @@ function buildGallery() {
           alt: `${getFullNames()} 的婚礼封面照`,
         }
       : null;
+  const heroImageAssetName = getGalleryAssetName(heroImageSource?.src);
   const galleryItems = galleryManifest
-    .filter((item) => !item.isCover && item.src !== heroImageSource?.src)
+    .filter((item) => !item.isCover && item.assetName !== heroImageAssetName)
     .map((item, index) => ({
       ...item,
       caption: `${getFullNames()} · 婚纱照 ${String(index + 1).padStart(2, "0")}`,
       aspectRatio: item.width && item.height ? `${item.width} / ${item.height}` : "4 / 5",
     }))
     .sort((leftItem, rightItem) => {
-      if (leftItem.src === preferredGalleryFirstImage) {
+      if (leftItem.assetName === preferredGalleryFirstImage) {
         return -1;
       }
 
-      if (rightItem.src === preferredGalleryFirstImage) {
+      if (rightItem.assetName === preferredGalleryFirstImage) {
         return 1;
       }
 

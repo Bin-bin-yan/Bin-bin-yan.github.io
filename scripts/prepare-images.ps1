@@ -2,6 +2,9 @@ param(
     [string]$SourceDir = ".\图片",
     [string]$OutputDir = ".\assets\images\gallery",
     [string]$ManifestPath = ".\src\data\gallery.generated.js",
+    [string]$CdnRepoOwner = "Bin-bin-yan",
+    [string]$CdnRepoName = "Bin-bin-yan.github.io",
+    [string]$CdnRef = "main",
     [int]$HeroMaxWidth = 1600,
     [int]$GalleryMaxWidth = 960,
     [int]$HeroJpegQuality = 80,
@@ -119,6 +122,7 @@ function Save-OptimizedJpeg {
 $resolvedSource = Resolve-Path -Path $SourceDir
 $resolvedOutput = Join-Path -Path (Get-Location) -ChildPath $OutputDir
 $resolvedManifest = Join-Path -Path (Get-Location) -ChildPath $ManifestPath
+$cdnBaseUrl = "https://cdn.jsdelivr.net/gh/$CdnRepoOwner/$CdnRepoName@$CdnRef/assets/images/gallery"
 
 New-Item -ItemType Directory -Force -Path $resolvedOutput | Out-Null
 New-Item -ItemType Directory -Force -Path ([System.IO.Path]::GetDirectoryName($resolvedManifest)) | Out-Null
@@ -152,7 +156,8 @@ foreach ($file in $files) {
         -Quality $quality
 
     $manifestItems += [PSCustomObject]@{
-        src     = "./assets/images/gallery/$targetName"
+        src     = "$cdnBaseUrl/$targetName"
+        assetName = $targetName
         isCover = $isCover
         width   = $imageMeta.Width
         height  = $imageMeta.Height
