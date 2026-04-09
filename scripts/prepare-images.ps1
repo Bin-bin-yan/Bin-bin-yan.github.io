@@ -2,9 +2,10 @@ param(
     [string]$SourceDir = ".\图片",
     [string]$OutputDir = ".\assets\images\gallery",
     [string]$ManifestPath = ".\src\data\gallery.generated.js",
-    [int]$HeroMaxWidth = 1800,
-    [int]$GalleryMaxWidth = 1440,
-    [int]$JpegQuality = 82
+    [int]$HeroMaxWidth = 1600,
+    [int]$GalleryMaxWidth = 960,
+    [int]$HeroJpegQuality = 80,
+    [int]$GalleryJpegQuality = 74
 )
 
 Set-StrictMode -Version Latest
@@ -97,6 +98,11 @@ function Save-OptimizedJpeg {
             finally {
                 $encoderParameters.Dispose()
             }
+
+            return [PSCustomObject]@{
+                Width  = $targetWidth
+                Height = $targetHeight
+            }
         }
         finally {
             $bitmap.Dispose()
@@ -123,18 +129,28 @@ if (-not $files) {
     throw "在 '$SourceDir' 没找到可处理的图片文件。"
 }
 
-$index = 1
+$index = 0
 
 foreach ($file in $files) {
     $targetName = "wedding-{0:d2}.jpg" -f $index
     $targetPath = Join-Path -Path $resolvedOutput -ChildPath $targetName
-    $maxWidth = if ($index -eq 1) { $HeroMaxWidth } else { $GalleryMaxWidth }
+    $isCover = ($index -eq 1)
+    $maxWidth = if ($isCover) { $HeroMaxWidth } else { $GalleryMaxWidth }
+    $quality = if ($isCover) { $HeroJpegQuality } else { $GalleryJpegQuality }
 
-    Save-OptimizedJpeg -SourcePath $file.FullName -DestinationPath $targetPath -MaxWidth $maxWidth -Quality $JpegQuality
+    # Without the old lightbox preview we can generate much smaller gallery files,
+    # because every non-cover image now only needs to read well as a grid thumbnail.
+    $imageMeta = Save-OptimizedJpeg `
+        -SourcePath $file.FullName `
+        -DestinationPath $targetPath `
+        -MaxWidth $maxWidth `
+        -Quality $quality
 
     $manifestItems += [PSCustomObject]@{
         src     = "./assets/images/gallery/$targetName"
-        isCover = ($index -eq 1)
+        isCover = $isCover
+        width   = $imageMeta.Width
+        height  = $imageMeta.Height
     }
 
     $index++

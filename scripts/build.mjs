@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { cp, mkdir, readdir, rm } from "node:fs/promises";
+import { copyFile, mkdir, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 
 // Only publish the actual site files so local plans, scripts, and raw assets stay private.
@@ -26,10 +26,33 @@ async function main() {
     }
 
     const destinationPath = path.join(distDir, entry);
-    await cp(sourcePath, destinationPath, { recursive: true });
+    await copyEntry(sourcePath, destinationPath);
   }
 
   console.log(`Build complete: ${distDir}`);
+}
+
+async function copyEntry(sourcePath, destinationPath) {
+  const sourceStats = await stat(sourcePath);
+  const isDirectory = sourceStats.isDirectory();
+
+  if (isDirectory) {
+    await mkdir(destinationPath, { recursive: true });
+
+    const childEntries = await readdir(sourcePath, { withFileTypes: true });
+
+    for (const childEntry of childEntries) {
+      await copyEntry(
+        path.join(sourcePath, childEntry.name),
+        path.join(destinationPath, childEntry.name)
+      );
+    }
+
+    return;
+  }
+
+  await mkdir(path.dirname(destinationPath), { recursive: true });
+  await copyFile(sourcePath, destinationPath);
 }
 
 main().catch((error) => {

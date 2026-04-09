@@ -1,7 +1,6 @@
 import { galleryManifest } from "./data/gallery.generated.js";
 import { weddingData } from "./data/wedding.js";
 import { startCountdown } from "./utils/countdown.js";
-import { setupLightbox } from "./utils/lightbox.js";
 import { setupReveal } from "./utils/reveal.js";
 
 const elements = {
@@ -31,9 +30,6 @@ const elements = {
     seconds: document.querySelector("#seconds-value"),
     hint: document.querySelector("#countdown-hint"),
   },
-  dialog: document.querySelector("#photo-dialog"),
-  dialogImage: document.querySelector("#dialog-image"),
-  dialogCaption: document.querySelector("#photo-dialog-title"),
 };
 
 const formatters = {
@@ -55,6 +51,7 @@ const runtime = {
   audioWarmupPromise: null,
   galleryStreamStarted: false,
   galleryStartScheduled: false,
+  galleryObserver: null,
 };
 
 let statusTimer = 0;
@@ -335,7 +332,11 @@ async function attemptDirectAudioPlay() {
 
 function loadGalleryImage(imageElement) {
   return new Promise((resolve) => {
-    if (!imageElement || imageElement.dataset.loaded === "true") {
+    if (
+      !imageElement ||
+      imageElement.dataset.loaded === "true" ||
+      imageElement.dataset.loading === "true"
+    ) {
       resolve();
       return;
     }
@@ -349,6 +350,7 @@ function loadGalleryImage(imageElement) {
 
     const parentCard = imageElement.closest(".gallery-card");
     let settled = false;
+    imageElement.dataset.loading = "true";
 
     const finish = () => {
       if (settled) {
@@ -356,9 +358,11 @@ function loadGalleryImage(imageElement) {
       }
 
       settled = true;
+      imageElement.dataset.loading = "false";
       imageElement.dataset.loaded = "true";
       imageElement.classList.add("is-loaded");
       parentCard?.classList.remove("gallery-card--loading");
+      parentCard?.classList.add("gallery-card--loaded");
       resolve();
     };
 
@@ -379,9 +383,43 @@ function startGalleryLoading() {
 
   runtime.galleryStreamStarted = true;
 
+  // Gallery cards no longer open a full-screen preview, so we can treat them as
+  // true thumbnails and only fetch nearby images instead of rushing all of them at once.
   const galleryImages = [...elements.galleryGrid.querySelectorAll("[data-gallery-src]")];
-  galleryImages.forEach((imageElement) => {
-    void loadGalleryImage(imageElement);
+
+  if (!galleryImages.length) {
+    return;
+  }
+
+  // IntersectionObserver keeps lazy loading off the scroll handler so mobile
+  // devices don't need to do viewport math on every scroll frame.
+  runtime.galleryObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) {
+          return;
+        }
+
+        runtime.galleryObserver?.unobserve(entry.target);
+        void loadGalleryImage(entry.target);
+      });
+    },
+    {
+      root: null,
+      rootMargin: "280px 0px",
+      threshold: 0.01,
+    }
+  );
+
+  galleryImages.forEach((imageElement, index) => {
+    // Preload only the first row worth of thumbnails; the rest can wait until
+    // they are close to the viewport so audio and image decoding don't pile up.
+    if (index < 2) {
+      void loadGalleryImage(imageElement);
+      return;
+    }
+
+    runtime.galleryObserver?.observe(imageElement);
   });
 }
 
@@ -587,6 +625,7 @@ function buildGallery() {
     .map((item, index) => ({
       ...item,
       caption: `${getFullNames()} · 婚纱照 ${String(index + 1).padStart(2, "0")}`,
+      aspectRatio: item.width && item.height ? `${item.width} / ${item.height}` : "4 / 5",
     }));
 
   if (heroImageSource) {
@@ -600,24 +639,24 @@ function buildGallery() {
     scheduleAudioWarmup();
   }
 
+  // Once preview is removed, gallery cards only need to look good in the grid.
+  // That lets us downsize the source files and reserve exact space up front.
   elements.galleryGrid.innerHTML = galleryItems
     .map(
       (item, index) => `
         <article
           class="gallery-card gallery-card--loading"
-          style="--item-index:${index % 6};"
-          tabindex="0"
-          aria-label="${item.caption}"
-          data-gallery-trigger
-          data-image="${item.src}"
-          data-caption="${item.caption}"
+          style="--item-index:${index % 6}; aspect-ratio:${item.aspectRatio};"
         >
           <img
             class="gallery-card__image"
             src="${TRANSPARENT_PLACEHOLDER}"
             alt="${item.caption}"
             data-gallery-src="${item.src}"
-            loading="eager"
+            width="${item.width || ""}"
+            height="${item.height || ""}"
+            loading="lazy"
+            fetchpriority="${index < 2 ? "high" : "low"}"
             decoding="async"
           />
         </article>
@@ -749,13 +788,6 @@ function wireInteractions() {
     syncMusicState();
     showStatus("音乐资源加载出了点岔子，稍后再试一下。");
   });
-
-  setupLightbox({
-    dialog: elements.dialog,
-    imageElement: elements.dialogImage,
-    captionElement: elements.dialogCaption,
-    triggerSelector: "[data-gallery-trigger]",
-  });
 }
 
 function wireCountdown() {
@@ -787,6 +819,8 @@ function boot() {
       stopCountdown();
       stopReveal();
       pauseMusic();
+      runtime.galleryObserver?.disconnect();
+      runtime.galleryObserver = null;
       document.body.classList.remove("music-player-compact");
     },
     { once: true }

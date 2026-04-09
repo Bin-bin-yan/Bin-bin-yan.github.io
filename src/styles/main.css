@@ -659,22 +659,28 @@ body.is-unsealed .opening-screen {
   --item-index: 0;
   position: relative;
   overflow: hidden;
+  isolation: isolate;
   width: 100%;
+  aspect-ratio: 4 / 5;
   padding: 0;
   border-radius: 1.5rem;
   border: 1px solid rgba(142, 54, 82, 0.08);
-  background: rgba(255, 255, 255, 0.76);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 250, 0.82), rgba(249, 240, 238, 0.78)),
+    rgba(255, 255, 255, 0.76);
   box-shadow: var(--shadow-card);
-  cursor: pointer;
   transition:
     transform var(--transition-base),
     box-shadow var(--transition-base);
 }
 
 .gallery-card--loading {
+  /* Keep the placeholder tinted and dimensional so the gallery feels present
+     while thumbnails stream in, instead of flashing a flat white slab. */
   background:
-    linear-gradient(180deg, rgba(250, 244, 241, 0.96), rgba(246, 236, 231, 0.94)),
-    rgba(255, 250, 247, 0.9);
+    linear-gradient(160deg, rgba(255, 250, 247, 0.94), rgba(248, 236, 240, 0.9)),
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.58), transparent 28%),
+    linear-gradient(135deg, rgba(216, 106, 141, 0.08), rgba(192, 148, 76, 0.08));
 }
 
 .gallery-card::before {
@@ -687,38 +693,64 @@ body.is-unsealed .opening-screen {
   transition: opacity var(--transition-base);
 }
 
+.gallery-card::after {
+  position: absolute;
+  inset: 13% 11%;
+  border-radius: 1.2rem;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.56), transparent 24%),
+    linear-gradient(145deg, rgba(246, 223, 232, 0.34), rgba(232, 206, 193, 0.12) 48%, rgba(216, 106, 141, 0.12));
+  opacity: 0;
+  transform: scale(0.98);
+  content: "";
+  pointer-events: none;
+  transition:
+    opacity 260ms ease,
+    transform 260ms ease;
+}
+
 .gallery-card--loading::before {
   background:
     linear-gradient(
       110deg,
-      rgba(255, 255, 255, 0.12) 12%,
-      rgba(255, 255, 255, 0.7) 22%,
-      rgba(255, 255, 255, 0.14) 36%
+      rgba(255, 255, 255, 0.08) 12%,
+      rgba(255, 247, 246, 0.62) 24%,
+      rgba(255, 255, 255, 0.08) 40%
     ),
-    linear-gradient(135deg, rgba(241, 223, 231, 0.34), rgba(255, 248, 244, 0.08));
-  background-size: 200% 100%, 100% 100%;
-  opacity: 1;
-  animation: skeleton-shimmer 1.05s linear infinite;
+    linear-gradient(135deg, rgba(241, 223, 231, 0.28), rgba(255, 248, 244, 0.08));
+  background-size: 180% 100%, 100% 100%;
+  opacity: 0.94;
+  animation: skeleton-shimmer 1.3s linear infinite;
+}
+
+.gallery-card--loading::after {
+  opacity: 0.92;
+}
+
+.gallery-card--loaded::after {
+  opacity: 0;
+  transform: scale(1.02);
 }
 
 .gallery-card__image {
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 16rem;
+  min-height: 0;
   object-fit: cover;
-  transform: scale(1.01);
+  transform: scale(1.02);
   opacity: 0;
-  filter: blur(10px);
+  filter: blur(6px) saturate(0.94);
   transition:
-    transform 520ms ease,
-    opacity 360ms ease,
-    filter 360ms ease;
+    transform 420ms ease,
+    opacity 320ms ease,
+    filter 420ms ease;
 }
 
 .gallery-card__image.is-loaded {
   opacity: 1;
-  filter: blur(0);
+  transform: scale(1);
+  filter: blur(0) saturate(1);
 }
 
 .music-player {
@@ -1073,42 +1105,6 @@ body.music-playing.music-player-compact .music-player__toggle {
   box-shadow: 0 0 0 8px rgba(185, 139, 66, 0.1);
 }
 
-.photo-dialog {
-  width: min(92vw, 960px);
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 2rem;
-  background: rgba(42, 17, 26, 0.92);
-  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.42);
-}
-
-.photo-dialog::backdrop {
-  background: rgba(26, 10, 16, 0.72);
-  backdrop-filter: blur(8px);
-}
-
-.photo-dialog__close {
-  display: flex;
-  justify-content: flex-end;
-  padding: 1rem 1rem 0;
-}
-
-.photo-dialog__figure {
-  padding: 0 1rem 1rem;
-  margin: 0;
-}
-
-.photo-dialog__image {
-  width: 100%;
-  max-height: 76vh;
-  object-fit: contain;
-  border-radius: 1.25rem;
-}
-
-.photo-dialog__caption {
-  display: none;
-}
-
 .closing-card {
   text-align: center;
   background:
@@ -1237,13 +1233,12 @@ body.music-playing.music-player-compact .music-player__toggle {
 }
 
 .reveal--gallery.is-visible .gallery-card {
-  animation: gallery-cascade 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(100ms + var(--item-index) * 90ms);
+  animation: line-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(60ms + var(--item-index) * 60ms);
 }
 
 .reveal--gallery.is-visible .gallery-card__image {
-  animation: image-soft-focus 840ms ease both;
-  animation-delay: calc(100ms + var(--item-index) * 90ms);
+  animation: none;
 }
 
 .reveal--tips.is-visible .reminder-list__item {
@@ -1439,32 +1434,6 @@ body.is-unsealed .hero.reveal.is-visible .hero__media {
   }
 }
 
-@keyframes gallery-cascade {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 1.2rem, 0) scale(0.96);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
-@keyframes image-soft-focus {
-  from {
-    opacity: 0;
-    filter: blur(10px);
-    transform: scale(1.04);
-  }
-
-  to {
-    opacity: 1;
-    filter: blur(0);
-    transform: scale(1);
-  }
-}
-
 @keyframes reminder-sweep {
   from {
     opacity: 0;
@@ -1573,23 +1542,10 @@ body.is-unsealed .hero.reveal.is-visible .hero__media {
       inset 0 1px 0 rgba(255, 255, 255, 0.38);
   }
 
-  .gallery-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 22px 44px rgba(74, 26, 38, 0.16);
-  }
-
-  .gallery-card:hover::before {
-    opacity: 0.5;
-  }
-
-  .gallery-card:hover .gallery-card__image {
-    transform: scale(1.04);
-  }
 }
 
 @media (hover: none) {
-  .button:active,
-  .gallery-card:active {
+  .button:active {
     transform: scale(0.99);
   }
 }
