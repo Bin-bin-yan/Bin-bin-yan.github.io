@@ -141,7 +141,11 @@ Get-ChildItem -Path $resolvedOutput -File -ErrorAction SilentlyContinue | Remove
 
 $manifestItems = @()
 $files = Get-ChildItem -Path $resolvedSource -File |
-    Where-Object { $ExcludedSourceFiles -notcontains $_.Name } |
+    Where-Object {
+        $ExcludedSourceFiles -notcontains $_.Name -and
+        $_.Extension -match '^\.(jpg|jpeg)$' -and
+        $_.BaseName -match '^\d{2}$'
+    } |
     Sort-Object Name
 
 if (-not $files) {
