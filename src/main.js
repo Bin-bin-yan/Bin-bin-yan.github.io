@@ -51,7 +51,6 @@ const runtime = {
   audioWarmupPromise: null,
   galleryStreamStarted: false,
   galleryStartScheduled: false,
-  galleryObserver: null,
 };
 
 let statusTimer = 0;
@@ -383,43 +382,12 @@ function startGalleryLoading() {
 
   runtime.galleryStreamStarted = true;
 
-  // Gallery cards no longer open a full-screen preview, so we can treat them as
-  // true thumbnails and only fetch nearby images instead of rushing all of them at once.
+  // The user prefers the gallery to wake up right after BGM is stable, instead
+  // of waiting on scroll. We still keep the images lightweight so this burst stays manageable.
   const galleryImages = [...elements.galleryGrid.querySelectorAll("[data-gallery-src]")];
 
-  if (!galleryImages.length) {
-    return;
-  }
-
-  // IntersectionObserver keeps lazy loading off the scroll handler so mobile
-  // devices don't need to do viewport math on every scroll frame.
-  runtime.galleryObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) {
-          return;
-        }
-
-        runtime.galleryObserver?.unobserve(entry.target);
-        void loadGalleryImage(entry.target);
-      });
-    },
-    {
-      root: null,
-      rootMargin: "280px 0px",
-      threshold: 0.01,
-    }
-  );
-
-  galleryImages.forEach((imageElement, index) => {
-    // Preload only the first row worth of thumbnails; the rest can wait until
-    // they are close to the viewport so audio and image decoding don't pile up.
-    if (index < 2) {
-      void loadGalleryImage(imageElement);
-      return;
-    }
-
-    runtime.galleryObserver?.observe(imageElement);
+  galleryImages.forEach((imageElement) => {
+    void loadGalleryImage(imageElement);
   });
 }
 
@@ -655,8 +623,8 @@ function buildGallery() {
             data-gallery-src="${item.src}"
             width="${item.width || ""}"
             height="${item.height || ""}"
-            loading="lazy"
-            fetchpriority="${index < 2 ? "high" : "low"}"
+            loading="eager"
+            fetchpriority="${index < 3 ? "high" : "auto"}"
             decoding="async"
           />
         </article>
@@ -819,8 +787,6 @@ function boot() {
       stopCountdown();
       stopReveal();
       pauseMusic();
-      runtime.galleryObserver?.disconnect();
-      runtime.galleryObserver = null;
       document.body.classList.remove("music-player-compact");
     },
     { once: true }

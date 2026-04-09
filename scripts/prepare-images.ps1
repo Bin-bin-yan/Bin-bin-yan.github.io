@@ -5,7 +5,10 @@ param(
     [int]$HeroMaxWidth = 1600,
     [int]$GalleryMaxWidth = 960,
     [int]$HeroJpegQuality = 80,
-    [int]$GalleryJpegQuality = 74
+    [int]$GalleryJpegQuality = 74,
+    [string[]]$ExcludedSourceFiles = @(
+        "3b33c4ef81a55cfc0a2f657e098e97b4.jpg"
+    )
 )
 
 Set-StrictMode -Version Latest
@@ -123,7 +126,9 @@ New-Item -ItemType Directory -Force -Path ([System.IO.Path]::GetDirectoryName($r
 Get-ChildItem -Path $resolvedOutput -File -ErrorAction SilentlyContinue | Remove-Item -Force
 
 $manifestItems = @()
-$files = Get-ChildItem -Path $resolvedSource -File | Sort-Object Name
+$files = Get-ChildItem -Path $resolvedSource -File |
+    Where-Object { $ExcludedSourceFiles -notcontains $_.Name } |
+    Sort-Object Name
 
 if (-not $files) {
     throw "在 '$SourceDir' 没找到可处理的图片文件。"

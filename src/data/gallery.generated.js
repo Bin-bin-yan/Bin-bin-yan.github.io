@@ -4,70 +4,64 @@ export const galleryManifest = [
     "src": "./assets/images/gallery/wedding-00.jpg",
     "isCover": false,
     "width": 960,
-    "height": 1327
+    "height": 1304
   },
   {
     "src": "./assets/images/gallery/wedding-01.jpg",
     "isCover": true,
     "width": 1600,
-    "height": 2173
+    "height": 1200
   },
   {
     "src": "./assets/images/gallery/wedding-02.jpg",
     "isCover": false,
     "width": 960,
-    "height": 720
+    "height": 1325
   },
   {
     "src": "./assets/images/gallery/wedding-03.jpg",
     "isCover": false,
     "width": 960,
-    "height": 1325
+    "height": 720
   },
   {
     "src": "./assets/images/gallery/wedding-04.jpg",
     "isCover": false,
     "width": 960,
-    "height": 720
+    "height": 1280
   },
   {
     "src": "./assets/images/gallery/wedding-05.jpg",
     "isCover": false,
     "width": 960,
-    "height": 1280
+    "height": 1329
   },
   {
     "src": "./assets/images/gallery/wedding-06.jpg",
     "isCover": false,
     "width": 960,
-    "height": 1329
+    "height": 720
   },
   {
     "src": "./assets/images/gallery/wedding-07.jpg",
     "isCover": false,
     "width": 960,
-    "height": 720
+    "height": 1280
   },
   {
     "src": "./assets/images/gallery/wedding-08.jpg",
     "isCover": false,
     "width": 960,
-    "height": 1280
+    "height": 1332
   },
   {
     "src": "./assets/images/gallery/wedding-09.jpg",
     "isCover": false,
     "width": 960,
-    "height": 1332
-  },
-  {
-    "src": "./assets/images/gallery/wedding-10.jpg",
-    "isCover": false,
-    "width": 960,
     "height": 720
   },
   {
-    "src": "./assets/images/gallery/wedding-11.jpg",
+    "src": "./assets/images/gallery/wedding-10.jpg",
     "isCover": false,
     "width": 960,
     "height": 720
