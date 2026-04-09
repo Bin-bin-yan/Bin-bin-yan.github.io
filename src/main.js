@@ -588,14 +588,16 @@ function applyWeddingData() {
 function buildGallery() {
   const coverImage = galleryManifest.find((item) => item.isCover) || galleryManifest[0];
   const preferredGalleryFirstImage = "wedding-10.jpg";
+  const requestedHeroAssetName = getGalleryAssetName(weddingData.hero.imageSrc);
+  const heroManifestItem = galleryManifest.find((item) => item.assetName === requestedHeroAssetName) || coverImage;
   const heroImageSource = weddingData.hero.imageSrc
     ? {
-        src: weddingData.hero.imageSrc,
+        src: heroManifestItem?.src || weddingData.hero.imageSrc,
         alt: weddingData.hero.imageAlt || `${getFullNames()} 的婚礼封面照`,
       }
-    : coverImage
+    : heroManifestItem
       ? {
-          src: coverImage.src,
+          src: heroManifestItem.src,
           alt: `${getFullNames()} 的婚礼封面照`,
         }
       : null;

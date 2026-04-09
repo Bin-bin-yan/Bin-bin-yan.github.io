@@ -4,7 +4,7 @@ param(
     [string]$ManifestPath = ".\src\data\gallery.generated.js",
     [string]$CdnRepoOwner = "Bin-bin-yan",
     [string]$CdnRepoName = "Bin-bin-yan.github.io",
-    [string]$CdnRef = "main",
+    [string]$CdnRef = "",
     [int]$HeroMaxWidth = 1600,
     [int]$GalleryMaxWidth = 960,
     [int]$HeroJpegQuality = 80,
@@ -122,6 +122,16 @@ function Save-OptimizedJpeg {
 $resolvedSource = Resolve-Path -Path $SourceDir
 $resolvedOutput = Join-Path -Path (Get-Location) -ChildPath $OutputDir
 $resolvedManifest = Join-Path -Path (Get-Location) -ChildPath $ManifestPath
+
+if ([string]::IsNullOrWhiteSpace($CdnRef)) {
+    try {
+        $CdnRef = (git rev-parse HEAD).Trim()
+    }
+    catch {
+        $CdnRef = "main"
+    }
+}
+
 $cdnBaseUrl = "https://cdn.jsdelivr.net/gh/$CdnRepoOwner/$CdnRepoName@$CdnRef/assets/images/gallery"
 
 New-Item -ItemType Directory -Force -Path $resolvedOutput | Out-Null
